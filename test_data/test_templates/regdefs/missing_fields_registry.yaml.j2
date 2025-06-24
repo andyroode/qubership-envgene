@@ -1,0 +1,8 @@
+{
+  "name": "{{ registry_name | default('missing-fields-registry') }}",
+  "credentialsId": "{{ credentials_id | default('missing-fields-creds') }}"
+  /* Missing required fields:
+     - mavenConfig
+     - dockerConfig
+  */
+}

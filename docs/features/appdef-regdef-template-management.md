@@ -7,16 +7,24 @@
     - [Configuration Overrides](#configuration-overrides)
     - [Flexible Source Control](#flexible-source-control)
   - [Template Structure](#template-structure)
-  - [Configuration Files](#configuration-files)
-  - [Use Cases](#use-cases)
-    - [Environment-Specific Configuration](#environment-specific-configuration)
-    - [Cluster-Specific Overrides](#cluster-specific-overrides)
+    - [Instance Repository](#instance-repository)
+    - [Configuration](#configuration)
+      - [app\_reg\_def\_mode](#app_reg_def_mode)
+      - [appregdef\_config.yaml](#appregdef_configyaml)
+    - [Template Rendering Process](#template-rendering-process)
     - [External Definition Sources](#external-definition-sources)
+  - [Pipeline Parameters](#pipeline-parameters)
+    - [APP\_REG\_DEFS\_JOB](#app_reg_defs_job)
+  - [Use Cases](#use-cases)
+    - [Standard Environment Build](#standard-environment-build)
+    - [External Definition Source](#external-definition-source)
+  - [JSON Schemas](#json-schemas)
+    - [AppDef Schema](#appdef-schema)
+    - [RegDef Schema](#regdef-schema)
   - [Troubleshooting](#troubleshooting)
-    - [Template Rendering Issues](#template-rendering-issues)
-    - [Configuration Override Problems](#configuration-override-problems)
-    - [External Source Issues](#external-source-issues)
-  - [Related Documentation](#related-documentation)
+    - [Common Issues](#common-issues)
+    - [Debugging](#debugging)
+  - [Implementation Details in EnvGene](#implementation-details-in-envgene)
 
 ## Problem Statement
 
@@ -61,7 +69,7 @@ EnvGene provides a comprehensive template management system for generating envir
 
 The template directory structure is organized as follows:
 
-```
+```text
 /templates/
 ├── appdefs/
 │   ├── app1.yaml.j2
@@ -75,9 +83,9 @@ The template directory structure is organized as follows:
     └── appregdef_config.yaml
 ```
 
-#### Instance Repository
+### Instance Repository
 
-```
+```text
 /environments/
 ├── <cluster-name>/
 │   ├── configuration/
@@ -168,6 +176,7 @@ The system can use AppDef and RegDef files from external job artifacts instead o
 **Description**: Controls the source of AppDef/RegDef files for environment generation.
 
 **Values**:
+
 - When set to a job name: Uses AppDef/RegDef files from the specified job's artifacts
 - When not set (empty): Uses local template rendering from the template repository
 

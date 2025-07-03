@@ -90,12 +90,16 @@ ENV ANSIBLE_LIBRARY=/module/ansible/library
 ENV PYTHONPATH=/usr/lib/python3.10/site-packages
 ENV PATH=/usr/local/bin:$PATH
 
-# Set permissions
-RUN chmod 754 /module/scripts/*
+# Set permissions and ensure scripts are executable
+RUN chmod +x /module/scripts/* && \
+    ls -la /module/scripts/
 
 # Create non-root user for security
 RUN addgroup -g 1001 appgroup && \
     adduser -D -s /bin/sh -u 1001 -G appgroup appuser
+
+# Change ownership of scripts to appuser
+RUN chown -R appuser:appgroup /module/scripts
 
 USER appuser
 

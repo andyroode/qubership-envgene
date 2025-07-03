@@ -1,6 +1,6 @@
 #########################################
 ## Stage 1: Build dependencies
-FROM ghcr.io/netcracker/base-images-module-base:main AS builder
+FROM ghcr.io/netcracker/base-images-module-base:main as builder
 
 USER root
 
@@ -9,7 +9,7 @@ COPY build_envgene/build/pip.conf /etc/pip.conf
 COPY build_envgene/build/requirements.txt /build/requirements.txt
 COPY build_envgene/build/requirements.yml /build/requirements.yml
 
-# Install system dependencies in a single layer with cleanup
+# Install system dependencies in a single layer
 RUN apk update \
     && apk add --no-cache \
         git \
@@ -39,40 +39,35 @@ RUN apk update \
     && ansible-galaxy collection install -r /build/requirements.yml -p /tmp/ansible-collections \
     && pip install PyYAML \
     && apk del build-base libxml2-dev libxslt-dev zlib-dev \
-    && rm -rf /var/cache/apk/* /var/tmp/* \
-    && find /usr/lib/python3.10 -name "*.pyc" -delete \
-    && find /usr/lib/python3.10 -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+    && rm -rf /var/cache/apk/* /tmp/* /var/tmp/*
 
 # Install Python packages
 COPY python /python
-RUN pip install --no-cache-dir /python/jschon-sort \
-    && pip install --no-cache-dir /python/envgene \
-    && pip install --no-cache-dir /python/integration \
-    && rm -rf /python
+RUN pip install /python/jschon-sort \
+    && pip install /python/envgene \
+    && pip install /python/integration
 
 #########################################
-## Stage 2: Runtime image - using Alpine for smaller size
-FROM alpine:3.18 AS runtime
+## Stage 2: Runtime image
+FROM ghcr.io/netcracker/base-images-module-base:main as runtime
 
-# Install only runtime dependencies
-RUN apk add --no-cache \
-        python3 \
-        py3-pip \
-        git \
-        curl \
-        jq \
-        zip \
-        unzip \
-        sudo \
-        openssh-client \
-        ca-certificates \
-    && rm -rf /var/cache/apk/*
+USER root
 
-# Copy Python packages and dependencies from builder
-COPY --from=builder /usr/lib/python3.10 /usr/lib/python3.10
-
-# Copy only necessary binaries
+# Copy only necessary system dependencies from builder
 COPY --from=builder /usr/local/bin/sops /usr/local/bin/sops
+COPY --from=builder /usr/bin/git /usr/bin/git
+COPY --from=builder /usr/bin/python3 /usr/bin/python3
+COPY --from=builder /usr/bin/pip3 /usr/bin/pip3
+COPY --from=builder /usr/bin/curl /usr/bin/curl
+COPY --from=builder /usr/bin/jq /usr/bin/jq
+COPY --from=builder /usr/bin/zip /usr/bin/zip
+COPY --from=builder /usr/bin/unzip /usr/bin/unzip
+COPY --from=builder /usr/bin/sudo /usr/bin/sudo
+
+# Copy Python packages and dependencies
+COPY --from=builder /usr/lib/python3.10 /usr/lib/python3.10
+COPY --from=builder /usr/local/lib/python3.10 /usr/local/lib/python3.10
+COPY --from=builder /tmp/ansible-collections /usr/lib/python3.10/site-packages/ansible_collections
 
 # Copy application files
 COPY build_envgene/build/pip.conf /etc/pip.conf
@@ -86,17 +81,10 @@ COPY env-builder /build_env/env-builder
 COPY schemas /build_env/schemas
 
 # Set environment variables
-ENV ANSIBLE_LIBRARY=/module/ansible/library
-ENV PYTHONPATH=/usr/lib/python3.10/site-packages
-ENV PATH=/usr/local/bin:$PATH
+ENV ANSIBLE_LIBRARY /module/ansible/library:$ANSIBLE_LIBRARY
+ENV PYTHONPATH /usr/local/lib/python3.10/site-packages:$PYTHONPATH
 
 # Set permissions
 RUN chmod 754 /module/scripts/*
-
-# Create non-root user for security
-RUN addgroup -g 1001 appgroup && \
-    adduser -D -s /bin/sh -u 1001 -G appgroup appuser
-
-USER appuser
 
 WORKDIR /module/ansible 

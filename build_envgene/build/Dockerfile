@@ -34,13 +34,13 @@ RUN apk update \
     && pip install --upgrade pip \
     && pip install --no-cache-dir -r /build/requirements.txt \
     && pip install ansible --upgrade \
-    && rm -rf /usr/lib/python3.10/site-packages/ansible_collections/* \
+    && rm -rf /usr/lib/python3.12/site-packages/ansible_collections/* \
     && ansible-galaxy collection install -r /build/requirements.yml -p /tmp/ansible-collections \
     && pip install PyYAML \
     && apk del build-base libxml2-dev libxslt-dev zlib-dev \
     && rm -rf /var/cache/apk/* /var/tmp/* \
-    && find /usr/lib/python3.10 -name "*.pyc" -delete \
-    && find /usr/lib/python3.10 -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
+    && find /usr/lib/python3.12 -name "*.pyc" -delete \
+    && find /usr/lib/python3.12 -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
 
 # Install Python packages
 COPY python /python
@@ -68,7 +68,7 @@ RUN apk add --no-cache \
     && rm -rf /var/cache/apk/*
 
 # Copy Python packages and dependencies from builder
-COPY --from=builder /usr/lib/python3.10 /usr/lib/python3.10
+COPY --from=builder /usr/lib/python3.12 /usr/lib/python3.12
 
 # Copy only necessary binaries
 COPY --from=builder /usr/local/bin/sops /usr/local/bin/sops
@@ -86,7 +86,7 @@ COPY schemas /build_env/schemas
 
 # Set environment variables
 ENV ANSIBLE_LIBRARY=/module/ansible/library
-ENV PYTHONPATH=/usr/lib/python3.10/site-packages
+ENV PYTHONPATH=/usr/lib/python3.12/site-packages
 ENV PATH=/usr/local/bin:$PATH
 
 # Set permissions

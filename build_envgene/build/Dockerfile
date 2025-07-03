@@ -1,7 +1,6 @@
 #########################################
 ## Stage 1: Build dependencies
-FROM ghcr.io/netcracker/base-images-module-base:main AS builder
-
+FROM ghcr.io/netcracker/qubership-base-module-dockerimage:v2.0.0 AS builder
 USER root
 
 # Copy only dependency files first for better caching

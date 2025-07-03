@@ -99,4 +99,4 @@ RUN addgroup -g 1001 appgroup && \
 
 USER appuser
 
-WORKDIR /module/ansible 
+WORKDIR /module/ansible

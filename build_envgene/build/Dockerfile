@@ -8,7 +8,7 @@ USER root
 COPY build_envgene/build/requirements.txt /build/requirements.txt
 COPY build_envgene/build/requirements.yml /build/requirements.yml
 
-# Install additional system dependencies
+# Install additional system dependencies (including build dependencies)
 RUN apk add --no-cache \
         git \
         openssh-client \
@@ -35,17 +35,18 @@ RUN source /module/venv/bin/activate \
     && pip install --no-cache-dir /python/integration \
     && rm -rf /python
 
-# Clean up build dependencies
+# Clean up build dependencies and cache
 RUN apk del build-base libxml2-dev libxslt-dev zlib-dev \
-    && rm -rf /var/cache/apk/* /var/tmp/*
+    && rm -rf /var/cache/apk/* /var/tmp/* /tmp/* \
+    && find /module/venv -name "*.pyc" -delete \
+    && find /module/venv -name "__pycache__" -type d -exec rm -rf {} + 2>/dev/null || true
 
-# Copy application files
+# Copy application files (only necessary directories)
 COPY build_envgene/ansible /module/ansible
 COPY build_envgene/scripts /module/scripts
 COPY build_envgene/workflows /workflows
 
 # Copy other build files
-COPY build_* create_* produce_* sort* /build_env/
 COPY scripts /build_env/scripts
 COPY env-builder /build_env/env-builder
 COPY schemas /build_env/schemas

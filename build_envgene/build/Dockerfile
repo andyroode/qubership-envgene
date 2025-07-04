@@ -1,6 +1,6 @@
 #########################################
 ## Build envgene image based on qubership-base-module-dockerimage
-FROM ghcr.io/netcracker/qubership-base-module-dockerimage:v2.0.0
+FROM ghcr.io/netcracker/qubership-base-module-dockerimage:feature-optimize_dockerimage
 
 USER root
 

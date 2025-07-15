@@ -56,7 +56,7 @@
     group_id:       "{{ atrifact_name_list[0] | default(group_id) }}"
     artifact_id:    "{{ atrifact_name_list[1] | default(artifact_id) }}"
     version:        "{{ atrifact_name_list[2] | default(version)  }}"
-    repository_url: "{{ template_repository_url }}"
+    repository_url: "{{ template_repository_url | default(repository_url) }}"
     username:       "{{ repository_username }}"
     password:       "{{ repository_password }}"
     dest:           "{{ artifact_dest }}"

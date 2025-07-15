@@ -40,7 +40,7 @@
   no_log: false
   register: discovery_output
   when:
-    - not (env_definition.envTemplate.template_download_zip | default(false) | bool)
+    - not (env_definition.envTemplate.artifactIsZip | default(false) | bool)
 
 - name: Set app template
   set_fact:

@@ -19,6 +19,11 @@
     - [`current_env.cluster.cloud_api_url`](#current_envclustercloud_api_url)
     - [`current_env.cluster.cloud_api_port`](#current_envclustercloud_api_port)
     - [`current_env.cluster.cloud_public_url`](#current_envclustercloud_public_url)
+  - [AppDef/RegDef macros](#appdefregdef-macros)
+    - [`appdefs.overrides`](#appdefs-overrides)
+    - [`regdefs.overrides`](#regdefs-overrides)
+    - [`app_lookup_key`](#app_lookup_key)
+    - [`env`](#env)
   - [Credential macro](#credential-macro)
   - [Deprecated macros](#deprecated-macros)
     - [`environment.environmentName`](#environmentenvironmentname)
@@ -351,6 +356,79 @@ Default value is `""`
 **Usage in sample:**
 
 - [Sample](samples/templates/env_templates/composite-dev/cloud.yml.j2)
+
+## AppDef/RegDef macros
+
+These macros are specifically used in AppDef and RegDef templates for rendering environment-specific configurations.
+
+### `appdefs.overrides`
+
+---
+**Description:** Provides access to AppDef override values defined in the `appregdef_config.yaml` file. Used to customize application definitions for specific environments or clusters.
+
+**Type:** HashMap
+
+**Basic usage:**
+
+```yaml
+name: "{{ artifactId }}"
+registryName: "{{ appdefs.overrides[app_lookup_key].registry | default('default-registry') }}"
+supportParallelDeploy: {{ appdefs.overrides[app_lookup_key].supportParallelDeploy | default('true') }}
+deployParameters:
+  replicas: "{{ appdefs.overrides[artifactId].replicas | default('1') }}"
+```
+
+**Usage in sample:** [Sample](test_data/test_templates/appdefs/app1.yaml.j2)
+
+### `regdefs.overrides`
+
+---
+**Description:** Provides access to RegDef override values defined in the `appregdef_config.yaml` file. Used to customize registry definitions for specific environments or clusters.
+
+**Type:** HashMap
+
+**Basic usage:**
+
+```yaml
+name: "{{ registry_name }}"
+credentialsId: "{{ regdefs.overrides[registry_name].credentialsId | default('default-creds') }}"
+mavenConfig:
+  repositoryDomainName: "{{ regdefs.overrides[registry_name].mavenConfig.repositoryDomainName | default('maven.example.com') }}"
+```
+
+**Usage in sample:** [Sample](test_data/test_templates/regdefs/registry1.yaml.j2)
+
+### `app_lookup_key`
+
+---
+**Description:** A special variable used to look up application-specific overrides in the configuration. Typically set to the artifactId or application name.
+
+**Type:** string
+
+**Basic usage:**
+
+```yaml
+# app_lookup_key is typically set during template rendering
+registryName: "{{ appdefs.overrides[app_lookup_key].registry | default('default-registry') }}"
+```
+
+### `env`
+
+---
+**Description:** Provides access to environment variables during template rendering. Useful for passing external parameters to templates.
+
+**Type:** HashMap
+
+**Basic usage:**
+
+```yaml
+name: {{ env['APP_NAME'] | default('default-app-name') }}
+registryName: {{ env['REGISTRY_NAME'] | default('default-registry') }}
+artifactId: {{ env['ARTIFACT_ID'] | default('com.example.default') }}
+```
+
+**Usage in sample:** [Sample](test_data/test_templates/appdefs/app_with_env_vars.yaml.j2)
+
 
 ## Credential macro
 

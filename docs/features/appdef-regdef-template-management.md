@@ -1,306 +1,325 @@
 # AppDef/RegDef Template Management
 
 - [AppDef/RegDef Template Management](#appdefregdef-template-management)
-  - [Problem Statement](#problem-statement)
-  - [Approach](#approach)
-    - [Template-Based Generation](#template-based-generation)
-    - [Configuration Overrides](#configuration-overrides)
-    - [Flexible Source Control](#flexible-source-control)
-  - [Template Structure](#template-structure)
-    - [Instance Repository](#instance-repository)
-    - [Configuration](#configuration)
-      - [app\_reg\_def\_mode](#app_reg_def_mode)
-      - [appregdef\_config.yaml](#appregdef_configyaml)
-    - [Template Rendering Process](#template-rendering-process)
-    - [External Definition Sources](#external-definition-sources)
-  - [Pipeline Parameters](#pipeline-parameters)
-    - [APP\_REG\_DEFS\_JOB](#app_reg_defs_job)
-  - [Use Cases](#use-cases)
-    - [Standard Environment Build](#standard-environment-build)
-    - [External Definition Source](#external-definition-source)
-  - [JSON Schemas](#json-schemas)
+  - [What are Application and Registry Definitions?](#what-are-application-and-registry-definitions)
+  - [Purpose and Problem Solved](#purpose-and-problem-solved)
+  - [Model and Structure](#model-and-structure)
     - [AppDef Schema](#appdef-schema)
     - [RegDef Schema](#regdef-schema)
-  - [Troubleshooting](#troubleshooting)
-    - [Common Issues](#common-issues)
-    - [Debugging](#debugging)
-  - [Implementation Details in EnvGene](#implementation-details-in-envgene)
+  - [Repository and File Structure](#repository-and-file-structure)
+    - [Instance Repository Structure](#instance-repository-structure)
+    - [Template Repository Structure](#template-repository-structure)
+  - [Usage and Consumers](#usage-and-consumers)
+    - [Primary Consumers](#primary-consumers)
+    - [Access Methods](#access-methods)
+  - [Processing during Instance Generation](#processing-during-instance-generation)
+  - [Template Creation](#template-creation)
+    - [Manual Template Creation](#manual-template-creation)
+    - [External Generation](#external-generation)
+  - [Transformation Capabilities](#transformation-capabilities)
+    - [Configuration for Transformation](#configuration-for-transformation)
+    - [Override Patterns](#override-patterns)
+    - [Why Transformation is Needed](#why-transformation-is-needed)
+  - [Use Cases](#use-cases)
+    - [1. Accessing AppDefs/RegDefs from File Structure](#1-accessing-appdefsregdefs-from-file-structure)
+    - [2. Creating and Using AppDef/RegDef Templates](#2-creating-and-using-appdefregdef-templates)
+    - [3. Transforming AppDefs/RegDefs](#3-transforming-appdefsregdefs)
+    - [4. Integrating with External Systems](#4-integrating-with-external-systems)
+  - [Related Documentation](#related-documentation)
 
-## Problem Statement
+## What are Application and Registry Definitions?
 
-Managing application and registry configurations across multiple environments presents several challenges:
+**Application Definitions (AppDefs)** are configuration files that define applications to be deployed in an environment. They contain:
 
-1. **Manual Configuration**: Without templates, each environment requires manual creation and maintenance of AppDef and RegDef files.
-2. **Configuration Consistency**: Ensuring consistent configuration across environments is difficult with manual processes.
-3. **Environment-Specific Overrides**: Different environments often require specific configuration values.
-4. **Reusability**: Common configuration patterns should be reusable across environments.
+- Application identifiers (name, artifactId, groupId)
+- Registry reference for artifact retrieval
+- Deployment parameters (key-value pairs)
+- Technical configuration parameters (key-value pairs)
+- Deployment behavior flags (e.g., parallel deployment support)
 
-Goals:
+**Registry Definitions (RegDefs)** are configuration files that define artifact repositories used for application deployment. They contain:
 
-1. Provide template-based generation of AppDef and RegDef files
-2. Support environment-specific and cluster-specific configuration overrides
-3. Enable flexible sourcing of definition files (local templates or external sources)
-4. Ensure consistent configuration across environments
+- Registry name
+- Credentials reference
+- Repository configurations for different types (Docker, Maven, NPM, etc.)
+- URLs and repository names for different stages (snapshot, staging, release)
 
-## Approach
+Together, these definitions provide the necessary information for locating, retrieving, and configuring applications during environment deployment.
 
-EnvGene provides a comprehensive template management system for generating environment-specific AppDef and RegDef files.
+## Purpose and Problem Solved
 
-### Template-Based Generation
+AppDefs and RegDefs solve several critical challenges in environment configuration management:
 
-- **Jinja2 Templates**: Uses Jinja2 templating engine for powerful and flexible template rendering
-- **Environment Variables**: Supports environment variable substitution in templates
-- **Default Values**: Templates can include default values for optional parameters
-- **Validation**: Validates rendered output against JSON schemas
+1. **Consistent Configuration**: Ensure applications are consistently configured across environments
+2. **Environment-Specific Customization**: Allow environment-specific overrides while maintaining a common base
+3. **Automated Deployment**: Enable automated environment creation with proper application configurations
+4. **Repository Management**: Standardize access to artifact repositories across environments
+5. **Separation of Concerns**: Decouple application configuration from deployment details
 
-### Configuration Overrides
+Without AppDefs and RegDefs, teams would need to manually configure each application for each environment, leading to inconsistencies, errors, and maintenance overhead.
 
-- **Global Overrides**: Apply configuration values across all templates
-- **Cluster-Specific Overrides**: Override values for specific clusters
-- **Override Precedence**: Cluster-specific overrides take precedence over global overrides
-
-### Flexible Source Control
-
-- **Local Templates**: Render templates from local repository
-- **External Sources**: Use pre-rendered AppDef/RegDef files from external job artifacts
-- **Pipeline Control**: Control source using pipeline parameters
-
-## Template Structure
-
-The template directory structure is organized as follows:
-
-```text
-/templates/
-├── appdefs/
-│   ├── app1.yaml.j2
-│   ├── app2.yml.j2
-│   └── ...
-├── regdefs/
-│   ├── registry1.yaml.j2
-│   ├── registry2.yml.j2
-│   └── ...
-└── configuration/
-    └── appregdef_config.yaml
-```
-
-### Instance Repository
-
-```text
-/environments/
-├── <cluster-name>/
-│   ├── configuration/
-│   │   └── appregdef_config.yaml (optional, cluster-specific overrides)
-│   └── <env-name>/
-│       ├── AppDefs/
-│       │   ├── app1.yml
-│       │   ├── app2.yml
-│       │   └── ...
-│       └── RegDefs/
-│           ├── registry1.yml
-│           ├── registry2.yml
-│           └── ...
-└── configuration/
-    └── appregdef_config.yaml (optional, global overrides)
-```
-
-### Configuration
-
-#### app_reg_def_mode
-
-The `app_reg_def_mode` setting in `config.yml` controls how AppDef and RegDef data is handled:
-
-```yaml
-app_reg_def_mode: "auto"  # Can be "auto" or "local"
-```
-
-- **auto**: Automatically determine the source based on availability
-- **local**: Use local template files only
-
-#### appregdef_config.yaml
-
-Configuration overrides can be specified in `appregdef_config.yaml`:
-
-```yaml
-appdefs:
-  overrides:
-    # Override by groupId:artifactId key
-    "com.example:app1":
-      version: "2.0.0"
-      registry: "custom-registry"
-    # Override by template name
-    "app2":
-      memory: "2048Mi"
-      replicas: 3
-
-regdefs:
-  overrides:
-    # Override by registry name
-    "docker-registry":
-      url: "https://custom-docker-registry.example.com"
-    "maven-registry":
-      credentials:
-        username: "custom-user"
-```
-
-### Template Rendering Process
-
-1. **Template Discovery**: The system searches for templates in `/templates/appdefs/` and `/templates/regdefs/` directories.
-2. **Configuration Loading**: The system loads configuration from `appregdef_config.yaml` files, with the following precedence:
-   - Cluster-specific configuration (`/environments/<cluster-name>/configuration/appregdef_config.yaml`)
-   - Global configuration (`/environments/configuration/appregdef_config.yaml`)
-3. **Template Rendering**: Each template is rendered using Jinja2 with the following context:
-   - Environment variables
-   - Configuration overrides
-   - For AppDefs: `artifactId`, `groupId`, and `app_lookup_key` (derived from template content)
-4. **Output Generation**: Rendered files are saved to the appropriate directories:
-   - AppDefs: `/environments/<cluster-name>/<env-name>/AppDefs/`
-   - RegDefs: `/environments/<cluster-name>/<env-name>/RegDefs/`
-
-### External Definition Sources
-
-The system can use AppDef and RegDef files from external job artifacts instead of rendering templates locally. This is controlled by the `APP_REG_DEFS_JOB` pipeline parameter:
-
-1. When `APP_REG_DEFS_JOB` is set to a job name:
-   - The system downloads and unpacks a `definitions.zip` file from the specified job
-   - Files are copied from paths specified by `app_defs_path` and `reg_defs_path` parameters
-   - No local template rendering occurs
-
-2. When `APP_REG_DEFS_JOB` is not set:
-   - The system discovers and renders templates from the local repository
-   - The rendering process is controlled by the `app_reg_def_mode` setting
-
-## Pipeline Parameters
-
-### APP_REG_DEFS_JOB
-
-**Description**: Controls the source of AppDef/RegDef files for environment generation.
-
-**Values**:
-
-- When set to a job name: Uses AppDef/RegDef files from the specified job's artifacts
-- When not set (empty): Uses local template rendering from the template repository
-
-**Default**: Empty (local template rendering)
-
-## Use Cases
-
-### Standard Environment Build
-
-1. Set `app_reg_def_mode: "local"` in `config.yml`
-2. Create templates in `/templates/appdefs/` and `/templates/regdefs/`
-3. Create `appregdef_config.yaml` with environment-specific overrides
-4. Run the environment build process
-5. Templates are rendered and saved to the appropriate directories
-
-### External Definition Source
-
-1. Set `APP_REG_DEFS_JOB: "appdef-generation-job"`
-2. Set `app_defs_path` and `reg_defs_path` to the appropriate paths within the job artifacts
-3. Run the environment build process
-4. AppDef and RegDef files are copied from the job artifacts instead of being rendered locally
-
-## JSON Schemas
+## Model and Structure
 
 ### AppDef Schema
 
-AppDef files must conform to the following schema structure:
-
-```json
-{
-  "type": "object",
-  "required": ["name", "artifactId", "groupId", "version", "registry"],
-  "properties": {
-    "name": { "type": "string" },
-    "artifactId": { "type": "string" },
-    "groupId": { "type": "string" },
-    "version": { "type": "string" },
-    "registry": { "type": "string" },
-    "deployment": {
-      "type": "object",
-      "properties": {
-        "replicas": { "type": "integer" },
-        "resources": {
-          "type": "object",
-          "properties": {
-            "requests": {
-              "type": "object",
-              "properties": {
-                "memory": { "type": "string" },
-                "cpu": { "type": "string" }
-              }
-            },
-            "limits": {
-              "type": "object",
-              "properties": {
-                "memory": { "type": "string" },
-                "cpu": { "type": "string" }
-              }
-            }
-          }
-        }
-      }
-    }
-  }
-}
+```yaml
+name: "application-name"                # Application name
+registryName: "registry-name"           # Reference to a RegDef
+artifactId: "app-artifact-id"           # Artifact identifier
+groupId: "com.example"                  # Group identifier
+supportParallelDeploy: true             # Parallel deployment flag
+deployParameters:                       # Deployment parameters
+  param1: "value1"
+  param2: "value2"
+technicalConfigurationParameters:       # Technical configuration
+  tech_param1: "value1"
+  tech_param2: "value2"
+solutionDescriptor: false               # Optional solution descriptor flag
 ```
+
+[Complete AppDef JSON Schema](/schemas/appdef.schema.json)
 
 ### RegDef Schema
 
-RegDef files must conform to the following schema structure:
+```yaml
+name: "registry-name"                   # Registry name
+credentialsId: "credentials-id"         # Reference to credentials
 
-```json
-{
-  "type": "object",
-  "required": ["name", "type"],
-  "properties": {
-    "name": { "type": "string" },
-    "type": { "type": "string", "enum": ["docker", "maven", "npm", "pypi"] },
-    "url": { "type": "string", "format": "uri" },
-    "credentials": {
-      "type": "object",
-      "properties": {
-        "username": { "type": "string" },
-        "password": { "type": "string" }
-      }
-    }
-  }
-}
+# Required repository configurations
+mavenConfig:
+  repositoryDomainName: "maven.example.com"
+  fullRepositoryUrl: "https://maven.example.com"
+  targetSnapshot: "snapshots"
+  targetStaging: "staging"
+  targetRelease: "releases"
+  snapshotGroup: "snapshot-group"
+  releaseGroup: "release-group"
+
+dockerConfig:
+  snapshotUri: "docker.example.com/snapshot"
+  stagingUri: "docker.example.com/staging"
+  releaseUri: "docker.example.com/release"
+  groupUri: "docker.example.com/group"
+  snapshotRepoName: "docker-snapshot"
+  stagingRepoName: "docker-staging"
+  releaseRepoName: "docker-release"
+  groupName: "docker-group"
+
+# Optional repository configurations
+goConfig:
+  goTargetSnapshot: "go-snapshot"
+  goTargetRelease: "go-release"
+  goProxyRepository: "go-proxy"
+
+# Additional optional configurations for other repository types
+# (npmConfig, rawConfig, helmConfig, helmAppConfig)
 ```
 
-## Troubleshooting
+[Complete RegDef JSON Schema](/schemas/regdef.schema.json)
 
-### Common Issues
+## Repository and File Structure
 
-1. **Missing Template Files**: Ensure templates exist in the correct directories (`/templates/appdefs/` and `/templates/regdefs/`).
-2. **Configuration Not Applied**: Check the precedence of configuration files and ensure overrides are correctly formatted.
-3. **Template Rendering Errors**: Verify that templates contain valid Jinja2 syntax and all required variables are defined.
-4. **External Job Artifacts Not Found**: Verify that the specified job exists and contains a `definitions.zip` file with the expected structure.
+### Instance Repository Structure
 
-### Debugging
+AppDefs and RegDefs are stored in the EnvGene instance repository:
 
-1. Enable debug logging to see detailed information about the template rendering process.
-2. Check the rendered files in the output directories to verify that templates are being processed correctly.
-3. Review the template rendering logs for any errors during the process.
+```
+/environments/
+├── <cluster-name>/
+│   └── <env-name>/
+│       ├── AppDefs/                # Application Definitions
+│       │   ├── app1.yml
+│       │   └── app2.yml
+│       └── RegDefs/                # Registry Definitions
+│           ├── registry1.yml
+│           └── registry2.yml
+```
 
-## Implementation Details in EnvGene
+### Template Repository Structure
 
-The AppDef/RegDef template management is implemented in the env-builder component of EnvGene. The main implementation is in the following files:
+Templates for AppDefs and RegDefs are stored in the template repository:
 
-- `env-builder/main.yaml`: Contains the main logic for determining whether to use external definitions or render templates locally.
-- `env-builder/roles/generate_appregdefs/tasks/main.yaml`: Implements the template discovery, configuration loading, and rendering process.
-- `env-builder/roles/generate_appregdefs/tasks/render_single_appdef.yaml`: Handles the rendering of individual AppDef templates.
-- `env-builder/roles/generate_appregdefs/tasks/render_single_regdef.yaml`: Handles the rendering of individual RegDef templates.
+```
+/templates/
+├── appdefs/                        # AppDef templates
+│   ├── app1.yml.j2
+│   └── app2.yml.j2
+├── regdefs/                        # RegDef templates
+│   ├── registry1.yml.j2
+│   └── registry2.yml.j2
+└── configuration/
+    └── appregdef_config.yaml       # Configuration overrides
+```
 
-The implementation follows these steps:
+## Usage and Consumers
 
-1. Check if `APP_REG_DEFS_JOB` is defined and has a non-empty value:
-   - If yes, download and unpack the external definitions from the specified job.
-   - If no, proceed with local template rendering.
+### Primary Consumers
 
-2. For local template rendering:
-   - Find AppDef and RegDef templates in the templates directory.
-   - Load configuration overrides from `appregdef_config.yaml`.
-   - Render each template using Jinja2 with the appropriate context.
-   - Save the rendered files to the environment's AppDefs and RegDefs directories.
+1. **Calculator CLI**: Uses AppDefs/RegDefs to resolve application dependencies and configurations
+2. **External Systems**: Access AppDefs/RegDefs for integration with deployment tools
+3. **EnvGene Core**: Processes AppDefs/RegDefs during environment generation
 
-3. The rendered AppDef and RegDef files are then available for use in the environment build process.
+### Access Methods
+
+Consumers access these files directly from the instance repository file structure. The files are standard YAML and can be parsed using any YAML library.
+
+## Processing during Instance Generation
+
+During environment generation from a template, AppDefs and RegDefs are processed as follows:
+
+1. **Discovery**: AppDef and RegDef templates are discovered in the template repository
+2. **Configuration Loading**: Overrides are loaded from `appregdef_config.yaml`
+3. **Template Rendering**: Templates are rendered using Jinja2 with:
+   - Environment variables
+   - Configuration overrides
+   - Template-specific variables
+4. **Validation**: Rendered files are validated against JSON schemas
+5. **Storage**: Final files are saved to the instance repository
+
+This process is handled by the `generate_appregdefs` Ansible role in EnvGene.
+
+## Template Creation
+
+### Manual Template Creation
+
+Templates are created as Jinja2 files (`.j2`) in the template repository:
+
+```yaml
+# Example AppDef template (app1.yml.j2)
+name: "{{ artifactId }}"
+registryName: "{{ appdefs.overrides[app_lookup_key].registry | default('default-registry') }}"
+artifactId: "{{ artifactId }}"
+groupId: "{{ groupId }}"
+supportParallelDeploy: {{ appdefs.overrides[app_lookup_key].supportParallelDeploy | default('true') }}
+deployParameters:
+  replicas: "{{ appdefs.overrides[artifactId].replicas | default('1') }}"
+technicalConfigurationParameters:
+  version: "{{ appdefs.overrides[app_lookup_key].version | default('1.0.0') }}"
+```
+
+Templates can use:
+- Standard Jinja2 syntax
+- Variables from environment configuration
+- Default values from `appregdef_config.yaml`
+- Conditional logic for environment-specific behavior
+
+### External Generation
+
+AppDefs and RegDefs can also be generated by an external job (not part of EnvGene):
+
+1. External job generates the definitions
+2. Files are packaged into a `definitions.zip` artifact
+3. EnvGene imports these files during environment generation
+
+This is configured using the `APP_REG_DEFS_JOB` pipeline parameter.
+
+## Transformation Capabilities
+
+AppDefs and RegDefs can be transformed during rendering to adapt to different environments or sites.
+
+### Configuration for Transformation
+
+Transformations are controlled by `appregdef_config.yaml`, which can be placed at:
+- Global level: `/environments/configuration/appregdef_config.yaml`
+- Cluster level: `/environments/<cluster-name>/configuration/appregdef_config.yaml`
+
+### Override Patterns
+
+```yaml
+# Global defaults
+default_values:
+  appdef:
+    supportParallelDeploy: true
+    deployParameters:
+      param1: "default_value1"
+  regdef:
+    mavenConfig:
+      repositoryDomainName: "maven.example.com"
+
+# Pattern-based overrides
+override_patterns:
+  environment:
+    pattern: "{{ env_name }}"
+    values:
+      dev:
+        appdef:
+          deployParameters:
+            param1: "dev_value1"
+      prod:
+        appdef:
+          deployParameters:
+            param1: "prod_value1"
+  
+  cluster:
+    pattern: "{{ cluster_name }}"
+    values:
+      cluster-01:
+        regdef:
+          dockerConfig:
+            snapshotUri: "docker.cluster01.example.com/snapshot"
+```
+
+### Why Transformation is Needed
+
+Transformations enable:
+1. **Site-Specific Configuration**: Different sites require different repository URLs
+2. **Environment-Specific Parameters**: Production needs different settings than development
+3. **Version Control**: Different environments may use different application versions
+4. **Cross-Environment Consistency**: Maintain core configuration while allowing customization
+
+## Use Cases
+
+### 1. Accessing AppDefs/RegDefs from File Structure
+
+**As a member of an external team integrating with EnvGene:**
+
+To access AppDefs and RegDefs:
+1. Navigate to the instance repository: `/environments/<cluster-name>/<env-name>/`
+2. Access AppDefs in the `/AppDefs/` directory
+3. Access RegDefs in the `/RegDefs/` directory
+4. Parse the YAML files to extract configuration information
+
+These files follow the JSON schemas defined in the EnvGene repository.
+
+### 2. Creating and Using AppDef/RegDef Templates
+
+**As an DevOps Engineer:**
+
+To create and use templates:
+1. Create Jinja2 templates in `/templates/appdefs/` and `/templates/regdefs/`
+2. Define default values and overrides in `appregdef_config.yaml`
+3. Set `app_reg_def_mode: "local"` in `config.yml` to use local templates
+4. During environment generation, templates are rendered with appropriate values
+
+This approach ensures consistent configuration across environments while allowing for customization.
+
+### 3. Transforming AppDefs/RegDefs
+
+**As an DevOps Engineer:**
+
+To transform definitions for different environments:
+1. Create an `appregdef_config.yaml` with override patterns
+2. Define environment-specific or cluster-specific values
+3. Place the config file at the appropriate level (global or cluster)
+4. During rendering, templates will apply the overrides based on environment context
+
+This enables delivery to different sites with specific configuration requirements.
+
+### 4. Integrating with External Systems
+
+**As an DevOps Engineer:**
+
+To use externally generated definitions:
+1. Set up an external job that generates AppDefs and RegDefs
+2. Configure the `APP_REG_DEFS_JOB` pipeline parameter with the job name
+3. During environment generation, EnvGene will import files from the job artifacts
+4. The external files will be placed in the instance repository
+
+This is useful when definitions need to be generated by specialized tools outside of EnvGene.
+
+## Related Documentation
+
+- [EnvGene Configurations](/docs/envgene-configs.md)
+- [EnvGene Objects](/docs/envgene-objects.md)
+- [Instance Pipeline Parameters](/docs/instance-pipeline-parameters.md)
+- [Template Pipeline Parameters](/docs/template-pipeline-parameters.md)

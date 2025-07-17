@@ -195,7 +195,7 @@ If `true`:
 
 2. **Local Template Rendering** (when not set or empty): The system will discover and render AppDef/RegDef templates from the template repository. Templates are located in `/templates/appdefs/` and `/templates/regdefs/` directories and can be either static files (`.yaml`/`.yml`) or Jinja2 templates (`.j2`).
 
-When using local template rendering, the process is further controlled by the `app_reg_def_mode` setting in `config.yml` (values: `auto`, `cmdb`, or `local`), which determines whether data is sourced from CMDB or local templates.
+When using local template rendering, the process is further controlled by the `app_reg_def_mode` setting in `config.yml` (values: `auto`, or `local`), which determines whether data is sourced from local templates.
 
 **Default Value**: `false`
 

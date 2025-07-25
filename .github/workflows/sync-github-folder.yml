@@ -1,0 +1,149 @@
+name: Sync .github folder across branches
+
+on:
+  workflow_dispatch:
+    inputs:
+      target_branches:
+        description: 'Target branches to sync (comma-separated, leave empty for all branches)'
+        required: false
+        default: ''
+      force_sync:
+        description: 'Force sync even if target branch files are newer'
+        required: false
+        default: 'false'
+  push:
+    branches:
+      - main
+    paths:
+      - '.github/**'
+
+jobs:
+  sync-github-folder:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      actions: read
+    
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Get all branches
+        id: get-branches
+        run: |
+          # Get all remote branches excluding main
+          BRANCHES=$(git branch -r | grep -v "origin/main" | grep -v "HEAD" | sed 's/origin\///' | tr '\n' ',' | sed 's/,$//')
+          echo "branches=$BRANCHES" >> $GITHUB_OUTPUT
+          echo "Available branches: $BRANCHES"
+
+      - name: Parse target branches
+        id: parse-targets
+        run: |
+          if [ -n "${{ github.event.inputs.target_branches }}" ]; then
+            TARGET_BRANCHES="${{ github.event.inputs.target_branches }}"
+          else
+            TARGET_BRANCHES="${{ steps.get-branches.outputs.branches }}"
+          fi
+          echo "target_branches=$TARGET_BRANCHES" >> $GITHUB_OUTPUT
+          echo "Target branches: $TARGET_BRANCHES"
+
+      - name: Sync .github folder to each branch
+        run: |
+          TARGET_BRANCHES="${{ steps.parse-targets.outputs.target_branches }}"
+          FORCE_SYNC="${{ github.event.inputs.force_sync }}"
+          
+          # Convert comma-separated string to array
+          IFS=',' read -ra BRANCH_ARRAY <<< "$TARGET_BRANCHES"
+          
+          for branch in "${BRANCH_ARRAY[@]}"; do
+            branch=$(echo "$branch" | xargs)  # Trim whitespace
+            if [ -n "$branch" ]; then
+              echo "Processing branch: $branch"
+              
+              # Check if branch exists
+              if git ls-remote --heads origin "$branch" | grep -q "$branch"; then
+                echo "Branch $branch exists, checking file timestamps..."
+                
+                # Get the latest commit hash for main branch
+                MAIN_COMMIT=$(git rev-parse origin/main)
+                
+                # Get the latest commit hash for target branch
+                TARGET_COMMIT=$(git rev-parse "origin/$branch")
+                
+                # Check if .github folder exists in target branch
+                if git ls-tree -r --name-only "origin/$branch" | grep -q "^\.github/"; then
+                  echo ".github folder exists in $branch"
+                  
+                  # Get the latest modification time of .github files in main
+                  MAIN_GITHUB_TIME=$(git log --format="%ct" --max-count=1 -- .github/ | head -1)
+                  
+                  # Get the latest modification time of .github files in target branch
+                  TARGET_GITHUB_TIME=$(git log --format="%ct" --max-count=1 "origin/$branch" -- .github/ | head -1)
+                  
+                  echo "Main .github latest commit time: $MAIN_GITHUB_TIME"
+                  echo "Target $branch .github latest commit time: $TARGET_GITHUB_TIME"
+                  
+                  # Compare timestamps or check force sync
+                  if [ "$FORCE_SYNC" = "true" ] || [ -z "$TARGET_GITHUB_TIME" ] || [ "$MAIN_GITHUB_TIME" -gt "$TARGET_GITHUB_TIME" ]; then
+                    echo "Syncing .github folder to $branch..."
+                    
+                    # Create a new branch from target branch
+                    git checkout -b "sync-github-$branch" "origin/$branch"
+                    
+                    # Copy .github folder from main
+                    git checkout origin/main -- .github/
+                    
+                    # Check if there are any changes
+                    if git diff --staged --quiet; then
+                      echo "No changes to sync for $branch"
+                      git checkout main
+                      git branch -D "sync-github-$branch"
+                    else
+                      # Commit and push changes
+                      git config user.name "github-actions[bot]"
+                      git config user.email "github-actions[bot]@users.noreply.github.com"
+                      git commit -m "Sync .github folder from main branch"
+                      
+                      # Push to target branch
+                      git push origin "sync-github-$branch:$branch"
+                      
+                      # Cleanup
+                      git checkout main
+                      git branch -D "sync-github-$branch"
+                      
+                      echo "Successfully synced .github folder to $branch"
+                    fi
+                  else
+                    echo "Skipping $branch - target branch .github files are newer or same age"
+                  fi
+                else
+                  echo ".github folder doesn't exist in $branch, creating it..."
+                  
+                  # Create a new branch from target branch
+                  git checkout -b "sync-github-$branch" "origin/$branch"
+                  
+                  # Copy .github folder from main
+                  git checkout origin/main -- .github/
+                  
+                  # Commit and push changes
+                  git config user.name "github-actions[bot]"
+                  git config user.email "github-actions[bot]@users.noreply.github.com"
+                  git commit -m "Add .github folder from main branch"
+                  
+                  # Push to target branch
+                  git push origin "sync-github-$branch:$branch"
+                  
+                  # Cleanup
+                  git checkout main
+                  git branch -D "sync-github-$branch"
+                  
+                  echo "Successfully created .github folder in $branch"
+                fi
+              else
+                echo "Branch $branch does not exist, skipping..."
+              fi
+            fi
+          done 

@@ -151,7 +151,7 @@ jobs:
                       echo "💾 Committing changes..."
                       git config user.name "github-actions[bot]"
                       git config user.email "github-actions[bot]@users.noreply.github.com"
-                      git commit -m "Sync .github folder from main branch"
+                                             git commit -m "ci: sync .github folder from main branch"
                       
                       # Push to target branch
                       echo "🚀 Pushing changes to $branch..."
@@ -205,7 +205,7 @@ jobs:
                   echo "💾 Committing changes..."
                   git config user.name "github-actions[bot]"
                   git config user.email "github-actions[bot]@users.noreply.github.com"
-                  git commit -m "Add .github folder from main branch"
+                                     git commit -m "ci: add .github folder from main branch"
                   
                   # Push to target branch
                   echo "🚀 Pushing changes to $branch..."

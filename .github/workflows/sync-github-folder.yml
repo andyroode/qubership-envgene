@@ -8,8 +8,12 @@ on:
         required: false
         default: ''
       force_sync:
-        description: 'Force sync even if target branch files are newer'
+        description: 'Sync mode'
         required: false
+        type: choice
+        options:
+          - 'false'
+          - 'true'
         default: 'false'
   push:
     branches:
@@ -108,11 +112,17 @@ jobs:
                     echo "📝 Creating temporary branch sync-github-$branch"
                     git checkout -b "sync-github-$branch" "origin/$branch"
                     
-                    # Copy .github folder from main
-                    echo "📋 Copying .github folder from main"
-                    git checkout origin/main -- .github/
-                    
-                    # Check if there are any changes
+                                         # Copy .github folder from main (excluding sync-github-folder.yml)
+                     echo "📋 Copying .github folder from main (excluding sync-github-folder.yml)"
+                     git checkout origin/main -- .github/
+                     
+                     # Remove sync-github-folder.yml if it exists in target branch
+                     if [ -f ".github/workflows/sync-github-folder.yml" ]; then
+                       echo "🗑️  Removing sync-github-folder.yml from target branch"
+                       git rm .github/workflows/sync-github-folder.yml
+                     fi
+                     
+                     # Check if there are any changes
                     if git diff --staged --quiet; then
                       echo "ℹ️  No changes to sync for $branch"
                       git checkout main
@@ -151,11 +161,17 @@ jobs:
                   echo "📝 Creating temporary branch sync-github-$branch"
                   git checkout -b "sync-github-$branch" "origin/$branch"
                   
-                  # Copy .github folder from main
-                  echo "📋 Copying .github folder from main"
-                  git checkout origin/main -- .github/
-                  
-                  # Show what files will be added
+                                     # Copy .github folder from main (excluding sync-github-folder.yml)
+                   echo "📋 Copying .github folder from main (excluding sync-github-folder.yml)"
+                   git checkout origin/main -- .github/
+                   
+                   # Remove sync-github-folder.yml if it exists in target branch
+                   if [ -f ".github/workflows/sync-github-folder.yml" ]; then
+                     echo "🗑️  Removing sync-github-folder.yml from target branch"
+                     git rm .github/workflows/sync-github-folder.yml
+                   fi
+                   
+                   # Show what files will be added
                   echo "📄 Files to be added:"
                   git diff --staged --name-only | sed 's/^/   - /'
                   

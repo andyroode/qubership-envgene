@@ -1,5 +1,7 @@
 name: "Dev: Sync .github folder across branches"
 
+run-name: "Dev: Sync .github folder across branches"
+
 on:
   workflow_dispatch:
     inputs:

@@ -124,6 +124,18 @@ jobs:
                        git rm -f .github/workflows/sync-github-folder.yml
                      fi
                      
+                     # Remove workflow files that don't exist in main
+                     echo "🧹 Cleaning up workflow files not present in main..."
+                     for workflow_file in .github/workflows/*.yml .github/workflows/*.yaml; do
+                       if [ -f "$workflow_file" ]; then
+                         workflow_name=$(basename "$workflow_file")
+                         if ! git ls-tree -r --name-only origin/main | grep -q "^\.github/workflows/$workflow_name$"; then
+                           echo "🗑️  Removing workflow not in main: $workflow_name"
+                           git rm -f "$workflow_file"
+                         fi
+                       fi
+                     done
+                     
                      # Check if there are any changes
                     if git diff --staged --quiet; then
                       echo "ℹ️  No changes to sync for $branch"
@@ -172,6 +184,18 @@ jobs:
                      echo "🗑️  Removing sync-github-folder.yml from target branch"
                      git rm -f .github/workflows/sync-github-folder.yml
                    fi
+                   
+                   # Remove workflow files that don't exist in main
+                   echo "🧹 Cleaning up workflow files not present in main..."
+                   for workflow_file in .github/workflows/*.yml .github/workflows/*.yaml; do
+                     if [ -f "$workflow_file" ]; then
+                       workflow_name=$(basename "$workflow_file")
+                       if ! git ls-tree -r --name-only origin/main | grep -q "^\.github/workflows/$workflow_name$"; then
+                         echo "🗑️  Removing workflow not in main: $workflow_name"
+                         git rm -f "$workflow_file"
+                       fi
+                     fi
+                   done
                    
                    # Show what files will be added
                   echo "📄 Files to be added:"

@@ -1,4 +1,4 @@
-name: Sync .github folder across branches
+name: "Dev: Sync .github folder across branches"
 
 on:
   workflow_dispatch:

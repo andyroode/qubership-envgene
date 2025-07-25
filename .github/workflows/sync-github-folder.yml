@@ -119,7 +119,7 @@ jobs:
                      # Remove sync-github-folder.yml if it exists in target branch
                      if [ -f ".github/workflows/sync-github-folder.yml" ]; then
                        echo "🗑️  Removing sync-github-folder.yml from target branch"
-                       git rm .github/workflows/sync-github-folder.yml
+                       git rm -f .github/workflows/sync-github-folder.yml
                      fi
                      
                      # Check if there are any changes
@@ -168,7 +168,7 @@ jobs:
                    # Remove sync-github-folder.yml if it exists in target branch
                    if [ -f ".github/workflows/sync-github-folder.yml" ]; then
                      echo "🗑️  Removing sync-github-folder.yml from target branch"
-                     git rm .github/workflows/sync-github-folder.yml
+                     git rm -f .github/workflows/sync-github-folder.yml
                    fi
                    
                    # Show what files will be added

@@ -85,6 +85,7 @@ jobs:
       SD_DELTA: ${{ env.SD_DELTA }}
       ENV_SPECIFIC_PARAMETERS: ${{ env.ENV_SPECIFIC_PARAMETERS }}
       CRED_ROTATION_PAYLOAD: ${{ env.CRED_ROTATION_PAYLOAD }}
+      CRED_ROTATION_FORCE: ${{ env.CRED_ROTATION_FORCE }}
       ENV_GENERATION_PARAMS: ${{ steps.env-generation-params.outputs.ENV_GENERATION_PARAMS }}
       DOCKER_IMAGE_GCIP: ${{ steps.docker-images.outputs.DOCKER_IMAGE_GCIP }}
       DOCKER_IMAGE_ENVGENE: ${{ steps.docker-images.outputs.DOCKER_IMAGE_ENVGENE }}
@@ -147,6 +148,7 @@ jobs:
           echo "SD_DELTA=$SD_DELTA" >> $GITHUB_OUTPUT
           echo "ENV_SPECIFIC_PARAMETERS=$ENV_SPECIFIC_PARAMETERS" >> $GITHUB_OUTPUT
           echo "CRED_ROTATION_PAYLOAD=$CRED_ROTATION_PAYLOAD" >> $GITHUB_OUTPUT
+          echo "CRED_ROTATION_FORCE=$CRED_ROTATION_FORCE" >> $GITHUB_OUTPUT
           echo "ENV_TEMPLATE_VERSION=$ENV_TEMPLATE_VERSION" >> $GITHUB_OUTPUT
           echo "ENV_BUILDER=$ENV_BUILDER" >> $GITHUB_OUTPUT
           echo "GET_PASSPORT=$GET_PASSPORT" >> $GITHUB_OUTPUT
@@ -184,6 +186,7 @@ jobs:
           echo "SD_DELTA = $SD_DELTA"
           echo "ENV_SPECIFIC_PARAMETERS = $ENV_SPECIFIC_PARAMETERS"
           echo "CRED_ROTATION_PAYLOAD = $CRED_ROTATION_PAYLOAD"
+          echo "CRED_ROTATION_FORCE = $CRED_ROTATION_FORCE"
           
       - name: Prepare Parameters
         id: matrix-generator
@@ -297,7 +300,8 @@ jobs:
         environment: ${{ fromJson(needs.show_environment_variables.outputs.env_matrix) }}
     env:
       FULL_ENV: ${{ matrix.environment }}
-      CRED_ROTATION_PAYLOAD: ${{ needs.show_environment_variables.outputs.CRED_ROTATION_PAYLOAD }}      
+      CRED_ROTATION_PAYLOAD: ${{ needs.show_environment_variables.outputs.CRED_ROTATION_PAYLOAD }}
+      CRED_ROTATION_FORCE: ${{ needs.show_environment_variables.outputs.CRED_ROTATION_FORCE }}
     steps:
       - name: Repository Checkout
         uses: actions/checkout@v4
@@ -318,8 +322,15 @@ jobs:
           export CLUSTER_NAME=$(echo "${{ matrix.environment }}" | cut -d'/' -f1)
           export ENV_NAME=$(echo "${{ matrix.environment }}" | cut -d'/' -f2 | xargs)              
           
+          CRED_ROTATION_FORCE="${{ needs.show_environment_variables.outputs.CRED_ROTATION_FORCE }}"
+          export CRED_ROTATION_FORCE
+          
           CRED_ROTATION_PAYLOAD="${{ needs.show_environment_variables.outputs.CRED_ROTATION_PAYLOAD }}"
           export CRED_ROTATION_PAYLOAD
+          
+          export ENVGENE_AGE_PRIVATE_KEY
+          export ENVGENE_AGE_PUBLIC_KEY
+          export PUBLIC_AGE_KEYS
           
           python3 /module/creds_rotation_scripts/creds_rotation_handler.py
 

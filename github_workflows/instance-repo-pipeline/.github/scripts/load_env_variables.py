@@ -148,6 +148,7 @@ def main():
         "DEPLOYMENT_TICKET_ID": "",
         "ENV_TEMPLATE_VERSION": "",
         "CRED_ROTATION_PAYLOAD": "{}",
+        "CRED_ROTATION_FORCE": "false",
     }
 
     validators = {
@@ -167,8 +168,9 @@ def main():
         "CMDB_IMPORT": validate_boolean,
         "DEPLOYMENT_TICKET_ID": validate_string,
         "ENV_TEMPLATE_VERSION": validate_string,
-        # New credential rotation payload variable
+        # New credential rotation variables
         "CRED_ROTATION_PAYLOAD": validate_cred_rotation_payload,
+        "CRED_ROTATION_FORCE": validate_boolean,
     }
 
     validated_data = {}

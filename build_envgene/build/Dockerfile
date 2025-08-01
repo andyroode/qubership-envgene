@@ -46,6 +46,11 @@ RUN /module/venv/bin/pip install --upgrade pip setuptools wheel
 RUN /module/venv/bin/pip install --no-cache-dir --retries 10 --timeout 60 -r /build/requirements.txt
 RUN /module/venv/bin/pip install ansible-core --upgrade
 # Install essential Ansible collections
+# Install to default location so they're available as Python modules for callbacks
+RUN /module/venv/bin/ansible-galaxy collection install ansible.utils
+RUN /module/venv/bin/ansible-galaxy collection install ansible.posix
+RUN /module/venv/bin/ansible-galaxy collection install community.general
+# Also install to custom location for playbook usage
 RUN /module/venv/bin/ansible-galaxy collection install ansible.utils -p /module/ansible/collections
 RUN /module/venv/bin/ansible-galaxy collection install ansible.posix -p /module/ansible/collections
 RUN /module/venv/bin/ansible-galaxy collection install community.general -p /module/ansible/collections

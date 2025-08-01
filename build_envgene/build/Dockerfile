@@ -54,6 +54,11 @@ RUN /module/venv/bin/ansible-galaxy collection install community.general
 RUN /module/venv/bin/ansible-galaxy collection install ansible.utils -p /module/ansible/collections
 RUN /module/venv/bin/ansible-galaxy collection install ansible.posix -p /module/ansible/collections
 RUN /module/venv/bin/ansible-galaxy collection install community.general -p /module/ansible/collections
+
+# Verify collections are accessible
+RUN /module/venv/bin/python -c "import ansible_collections.ansible.posix; print('ansible.posix collection is accessible')"
+RUN /module/venv/bin/python -c "import ansible_collections.ansible.utils; print('ansible.utils collection is accessible')"
+RUN /module/venv/bin/python -c "import ansible_collections.community.general; print('community.general collection is accessible')"
 RUN /module/venv/bin/pip install /python/jschon-sort
 RUN /module/venv/bin/pip install /python/envgene
 RUN /module/venv/bin/pip install /python/integration
@@ -73,11 +78,14 @@ RUN find /module/venv/lib/python3.12/site-packages -name '*.pyc' -delete
 # Don't remove test directories as they might be needed by Ansible
 RUN find /module/venv/lib/python3.12/site-packages -name '*.pyo' -delete
 RUN find /module/venv/lib/python3.12/site-packages -name '__pycache__' -type d -exec rm -rf {} + 2>/dev/null || true
-# Remove heavy Ansible collections that are not essential
+# Remove heavy Ansible collections that are not essential (but keep ansible.posix and ansible.utils)
 RUN rm -rf /module/venv/lib/python3.12/site-packages/ansible_collections/amazon /module/venv/lib/python3.12/site-packages/ansible_collections/azure /module/venv/lib/python3.12/site-packages/ansible_collections/google /module/venv/lib/python3.12/site-packages/ansible_collections/kubernetes 2>/dev/null || true
 # Remove test packages that are not needed in runtime (but keep Ansible test files)
 RUN rm -rf /module/venv/lib/python3.12/site-packages/pytest* /module/venv/lib/python3.12/site-packages/_pytest* 2>/dev/null || true
 RUN /module/venv/bin/pip cache purge
+
+# Verify collections are still accessible after cleanup
+RUN /module/venv/bin/python -c "import ansible_collections.ansible.posix; print('ansible.posix collection still accessible after cleanup')"
 
 # Set permissions
 RUN chmod 754 /module/scripts/*
@@ -110,6 +118,11 @@ COPY --from=build /build_env /build_env
 COPY --from=build /python /python
 COPY --from=build /etc/pip.conf /etc/pip.conf
 
+# Verify collections are accessible in runtime stage
+RUN /module/venv/bin/python -c "import ansible_collections.ansible.posix; print('ansible.posix collection accessible in runtime')"
+
+
+
 # Set permissions
 RUN chmod +x /usr/local/bin/sops
 
@@ -138,7 +151,8 @@ RUN rm -rf /module/venv/lib/python3.12/site-packages/setuptools* /module/venv/li
 ENV PATH=/module/venv/bin:$PATH \
     PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    ANSIBLE_LIBRARY=/module/ansible/library
+    ANSIBLE_LIBRARY=/module/ansible/library \
+    ANSIBLE_COLLECTIONS_PATH=/module/venv/lib/python3.12/site-packages/ansible_collections:/module/ansible/collections
 
 # Simple root-based container for CI/CD environments
 # This container runs as root to avoid permission issues in CI/CD pipelines

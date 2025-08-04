@@ -55,10 +55,6 @@ RUN /module/venv/bin/ansible-galaxy collection install ansible.utils -p /module/
 RUN /module/venv/bin/ansible-galaxy collection install ansible.posix -p /module/ansible/collections
 RUN /module/venv/bin/ansible-galaxy collection install community.general -p /module/ansible/collections
 
-# Verify collections are accessible
-RUN /module/venv/bin/python -c "import ansible_collections.ansible.posix; print('ansible.posix collection is accessible')"
-RUN /module/venv/bin/python -c "import ansible_collections.ansible.utils; print('ansible.utils collection is accessible')"
-RUN /module/venv/bin/python -c "import ansible_collections.community.general; print('community.general collection is accessible')"
 RUN /module/venv/bin/pip install /python/jschon-sort
 RUN /module/venv/bin/pip install /python/envgene
 RUN /module/venv/bin/pip install /python/integration

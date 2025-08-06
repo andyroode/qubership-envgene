@@ -386,7 +386,7 @@ jobs:
                     fi
                   done
                   
-                                                          # Add to summary
+                     # Add to summary
                      echo "  🔍 Summary: Missing=$MISSING_FILES, Extra=$EXTRA_FILES, Different=$DIFFERENT_FILES"
                      if [ -z "$MISSING_FILES" ] && [ -z "$EXTRA_FILES" ] && [ -z "$DIFFERENT_FILES" ]; then
                        UP_TO_DATE_BRANCHES=$((UP_TO_DATE_BRANCHES + 1))
@@ -424,15 +424,15 @@ jobs:
               fi
             done
             
-                         echo "" >> $GITHUB_STEP_SUMMARY
-             echo "### 📈 Summary Statistics" >> $GITHUB_STEP_SUMMARY
-             echo "- **Total branches:** $TOTAL_BRANCHES" >> $GITHUB_STEP_SUMMARY
-             echo "- **Up to date:** $UP_TO_DATE_BRANCHES" >> $GITHUB_STEP_SUMMARY
-             echo "- **With differences:** $BRANCHES_WITH_DIFFERENCES" >> $GITHUB_STEP_SUMMARY
-             echo "- **Without .github folder:** $BRANCHES_WITHOUT_GITHUB" >> $GITHUB_STEP_SUMMARY
-             echo "" >> $GITHUB_STEP_SUMMARY
-             echo "### 📋 Branches with Differences" >> $GITHUB_STEP_SUMMARY
-             echo "Only branches with differences are shown in the summary above."
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 📈 Summary Statistics" >> $GITHUB_STEP_SUMMARY
+            echo "- **Total branches:** $TOTAL_BRANCHES" >> $GITHUB_STEP_SUMMARY
+            echo "- **Up to date:** $UP_TO_DATE_BRANCHES" >> $GITHUB_STEP_SUMMARY
+            echo "- **With differences:** $BRANCHES_WITH_DIFFERENCES" >> $GITHUB_STEP_SUMMARY
+            echo "- **Without .github folder:** $BRANCHES_WITHOUT_GITHUB" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 📋 Branches with Differences" >> $GITHUB_STEP_SUMMARY
+            echo "Only branches with differences are shown in the summary above."
             
             echo "🔍 Summary statistics:"
             echo "  - Total branches: $TOTAL_BRANCHES"

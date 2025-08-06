@@ -41,15 +41,7 @@ env:
 jobs:
   tests:
     if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, 'feat:') || contains(github.event.head_commit.message, 'fix:') || contains(github.event.head_commit.message, 'BREAKING CHANGE')
-    runs-on: ubuntu-latest
-    container:
-      image: python:3.10-slim-bookworm
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-      
-      - name: Run Tests
-        uses: ./.github/actions/perform_tests
+    uses: ./.github/workflows/perform_tests.yml
 
   build-qubership-gcip:
     needs: [tests]

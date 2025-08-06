@@ -62,51 +62,51 @@ jobs:
           echo "target_branches=$TARGET_BRANCHES" >> $GITHUB_OUTPUT
           echo "Target branches: $TARGET_BRANCHES"
 
-                    - name: Sync .github folder to each branch
-         run: |
-           set -e
-           trap 'echo "Error occurred at line $LINENO"' ERR
-           
-           TARGET_BRANCHES="${{ steps.parse-targets.outputs.target_branches }}"
-           EXCLUDE_BRANCHES="${{ steps.parse-targets.outputs.exclude_branches }}"
-           CHECK_ONLY="${{ github.event.inputs.check_only }}"
-           
-                       # Check if target_branches is provided (only fail if not in check_only mode)
-            if [ -z "$TARGET_BRANCHES" ]; then
-              if [ "$CHECK_ONLY" = "true" ]; then
-                echo "⚠️  Warning: target_branches is empty, but check_only mode is enabled. Proceeding with empty branch list."
+      - name: Sync .github folder to each branch
+        run: |
+          set -e
+          trap 'echo "Error occurred at line $LINENO"' ERR
+          
+          TARGET_BRANCHES="${{ steps.parse-targets.outputs.target_branches }}"
+          EXCLUDE_BRANCHES="${{ steps.parse-targets.outputs.exclude_branches }}"
+          CHECK_ONLY="${{ github.event.inputs.check_only }}"
+          
+          # Check if target_branches is provided (only fail if not in check_only mode)
+          if [ -z "$TARGET_BRANCHES" ]; then
+            if [ "$CHECK_ONLY" = "true" ]; then
+              echo "⚠️  Warning: target_branches is empty, but check_only mode is enabled. Proceeding with empty branch list."
+            else
+              echo "❌ Error: target_branches is required. Please provide branch names or 'ALL'."
+              exit 1
+            fi
+          fi
+          
+          # Convert comma-separated string to array
+          IFS=',' read -ra BRANCH_ARRAY <<< "$TARGET_BRANCHES"
+          IFS=',' read -ra EXCLUDE_ARRAY <<< "$EXCLUDE_BRANCHES"
+          
+          # Create a filtered array excluding specified branches
+          FILTERED_BRANCHES=()
+          for branch in "${BRANCH_ARRAY[@]}"; do
+            branch=$(echo "$branch" | xargs)  # Trim whitespace
+            if [ -n "$branch" ]; then
+              # Check if branch should be excluded
+              EXCLUDED=false
+              for exclude_branch in "${EXCLUDE_ARRAY[@]}"; do
+                exclude_branch=$(echo "$exclude_branch" | xargs)  # Trim whitespace
+                if [ "$branch" = "$exclude_branch" ]; then
+                  EXCLUDED=true
+                  break
+                fi
+              done
+              
+              if [ "$EXCLUDED" = false ]; then
+                FILTERED_BRANCHES+=("$branch")
               else
-                echo "❌ Error: target_branches is required. Please provide branch names or 'ALL'."
-                exit 1
+                echo "🚫 Excluding branch: $branch"
               fi
             fi
-           
-           # Convert comma-separated string to array
-           IFS=',' read -ra BRANCH_ARRAY <<< "$TARGET_BRANCHES"
-           IFS=',' read -ra EXCLUDE_ARRAY <<< "$EXCLUDE_BRANCHES"
-           
-           # Create a filtered array excluding specified branches
-           FILTERED_BRANCHES=()
-           for branch in "${BRANCH_ARRAY[@]}"; do
-             branch=$(echo "$branch" | xargs)  # Trim whitespace
-             if [ -n "$branch" ]; then
-               # Check if branch should be excluded
-               EXCLUDED=false
-               for exclude_branch in "${EXCLUDE_ARRAY[@]}"; do
-                 exclude_branch=$(echo "$exclude_branch" | xargs)  # Trim whitespace
-                 if [ "$branch" = "$exclude_branch" ]; then
-                   EXCLUDED=true
-                   break
-                 fi
-               done
-               
-               if [ "$EXCLUDED" = false ]; then
-                 FILTERED_BRANCHES+=("$branch")
-               else
-                 echo "🚫 Excluding branch: $branch"
-               fi
-             fi
-           done
+          done
           
           echo "=========================================="
           echo "Starting process for ${#FILTERED_BRANCHES[@]} branch(es)"

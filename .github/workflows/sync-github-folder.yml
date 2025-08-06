@@ -386,34 +386,34 @@ jobs:
                     fi
                   done
                   
-                                     # Add to summary
-                   echo "  🔍 Summary: Missing=$MISSING_FILES, Extra=$EXTRA_FILES, Different=$DIFFERENT_FILES"
-                   if [ -z "$MISSING_FILES" ] && [ -z "$EXTRA_FILES" ] && [ -z "$DIFFERENT_FILES" ]; then
-                     UP_TO_DATE_BRANCHES=$((UP_TO_DATE_BRANCHES + 1))
-                     echo "  ✅ Added to summary: Up to date"
-                   else
-                     echo "⚠️ **$branch** - Has differences:" >> $GITHUB_STEP_SUMMARY
-                     if [ -n "$MISSING_FILES" ]; then
-                       MISSING_COUNT=$(echo "$MISSING_FILES" | wc -l 2>/dev/null || echo "0")
-                       echo "   - Missing files: $MISSING_COUNT" >> $GITHUB_STEP_SUMMARY
-                       echo "     Files: $MISSING_FILES" >> $GITHUB_STEP_SUMMARY
-                       echo "  📄 Missing files count: $MISSING_COUNT"
+                                                          # Add to summary
+                     echo "  🔍 Summary: Missing=$MISSING_FILES, Extra=$EXTRA_FILES, Different=$DIFFERENT_FILES"
+                     if [ -z "$MISSING_FILES" ] && [ -z "$EXTRA_FILES" ] && [ -z "$DIFFERENT_FILES" ]; then
+                       UP_TO_DATE_BRANCHES=$((UP_TO_DATE_BRANCHES + 1))
+                       echo "  ✅ Added to summary: Up to date"
+                     else
+                       echo "⚠️ **$branch** - Has differences:" >> $GITHUB_STEP_SUMMARY
+                       if [ -n "$MISSING_FILES" ]; then
+                         MISSING_COUNT=$(echo "$MISSING_FILES" | wc -l 2>/dev/null || echo "0")
+                         echo "   - Missing files: $MISSING_COUNT" >> $GITHUB_STEP_SUMMARY
+                         echo "$MISSING_FILES" | sed 's/^/     - /' >> $GITHUB_STEP_SUMMARY
+                         echo "  📄 Missing files count: $MISSING_COUNT"
+                       fi
+                       if [ -n "$EXTRA_FILES" ]; then
+                         EXTRA_COUNT=$(echo "$EXTRA_FILES" | wc -l 2>/dev/null || echo "0")
+                         echo "  📄 Extra files count: $EXTRA_COUNT"
+                         echo "   - Extra files: $EXTRA_COUNT" >> $GITHUB_STEP_SUMMARY
+                         echo "$EXTRA_FILES" | sed 's/^/     - /' >> $GITHUB_STEP_SUMMARY
+                       fi
+                       if [ -n "$DIFFERENT_FILES" ]; then
+                         DIFFERENT_COUNT=$(echo "$DIFFERENT_FILES" | wc -w 2>/dev/null || echo "0")
+                         echo "   - Different content: $DIFFERENT_COUNT" >> $GITHUB_STEP_SUMMARY
+                         echo "$DIFFERENT_FILES" | sed 's/^/     - /' >> $GITHUB_STEP_SUMMARY
+                         echo "  📄 Different files count: $DIFFERENT_COUNT"
+                       fi
+                       BRANCHES_WITH_DIFFERENCES=$((BRANCHES_WITH_DIFFERENCES + 1))
+                       echo "  ⚠️  Added to summary: Has differences"
                      fi
-                     if [ -n "$EXTRA_FILES" ]; then
-                       EXTRA_COUNT=$(echo "$EXTRA_FILES" | wc -l 2>/dev/null || echo "0")
-                       echo "  📄 Extra files count: $EXTRA_COUNT"
-                       echo "   - Extra files: $EXTRA_COUNT" >> $GITHUB_STEP_SUMMARY
-                       echo "     Files: $EXTRA_FILES" >> $GITHUB_STEP_SUMMARY
-                     fi
-                     if [ -n "$DIFFERENT_FILES" ]; then
-                       DIFFERENT_COUNT=$(echo "$DIFFERENT_FILES" | wc -w 2>/dev/null || echo "0")
-                       echo "   - Different content: $DIFFERENT_COUNT" >> $GITHUB_STEP_SUMMARY
-                       echo "     Files: $DIFFERENT_FILES" >> $GITHUB_STEP_SUMMARY
-                       echo "  📄 Different files count: $DIFFERENT_COUNT"
-                     fi
-                     BRANCHES_WITH_DIFFERENCES=$((BRANCHES_WITH_DIFFERENCES + 1))
-                     echo "  ⚠️  Added to summary: Has differences"
-                   fi
                 else
                   echo "📁 **$branch** - No .github folder" >> $GITHUB_STEP_SUMMARY
                   BRANCHES_WITHOUT_GITHUB=$((BRANCHES_WITHOUT_GITHUB + 1))

@@ -412,9 +412,9 @@ jobs:
                           echo "  📄 Extra files count: $EXTRA_COUNT"
                         fi
                         
-                                                 if [ -n "$DIFFERENT_FILES" ]; then
+                        if [ -n "$DIFFERENT_FILES" ]; then
                            DIFFERENT_COUNT=$(echo "$DIFFERENT_FILES" | wc -w 2>/dev/null || echo "0")
-                           echo "**Files with differences:** $DIFFERENT_COUNT" >> $GITHUB_STEP_SUMMARY
+                           echo "*Files with differences:* $DIFFERENT_COUNT" >> $GITHUB_STEP_SUMMARY
                            echo "$DIFFERENT_FILES" | tr ' ' '\n' | sed 's/^/- /' >> $GITHUB_STEP_SUMMARY
                            echo "" >> $GITHUB_STEP_SUMMARY
                            echo "  📄 Different files count: $DIFFERENT_COUNT"

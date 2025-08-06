@@ -392,37 +392,42 @@ jobs:
                        UP_TO_DATE_BRANCHES=$((UP_TO_DATE_BRANCHES + 1))
                        echo "  ✅ Added to summary: Up to date"
                      else
-                       # Добавлен символ • для лучшей визуализации и пустая строка после записи
-                       echo "• **$branch** - Has differences:" >> $GITHUB_STEP_SUMMARY
+                       # Новое форматирование: заголовок ветки с разделителем
+                       echo "#### $branch" >> $GITHUB_STEP_SUMMARY
+                       echo "---" >> $GITHUB_STEP_SUMMARY
+                       
                        if [ -n "$MISSING_FILES" ]; then
                          MISSING_COUNT=$(echo "$MISSING_FILES" | wc -l 2>/dev/null || echo "0")
-                         echo "  - Missing files: $MISSING_COUNT" >> $GITHUB_STEP_SUMMARY
-                         echo "$MISSING_FILES" | sed 's/^/    - /' >> $GITHUB_STEP_SUMMARY
+                         echo "**Missing files:** $MISSING_COUNT" >> $GITHUB_STEP_SUMMARY
+                         echo "$MISSING_FILES" | sed 's/^/- /' >> $GITHUB_STEP_SUMMARY
                          echo "  📄 Missing files count: $MISSING_COUNT"
                        fi
+                       
                        if [ -n "$EXTRA_FILES" ]; then
                          EXTRA_COUNT=$(echo "$EXTRA_FILES" | wc -l 2>/dev/null || echo "0")
+                         echo "**Extra files:** $EXTRA_COUNT" >> $GITHUB_STEP_SUMMARY
+                         echo "$EXTRA_FILES" | sed 's/^/- /' >> $GITHUB_STEP_SUMMARY
                          echo "  📄 Extra files count: $EXTRA_COUNT"
-                         echo "  - Extra files: $EXTRA_COUNT" >> $GITHUB_STEP_SUMMARY
-                         echo "$EXTRA_FILES" | sed 's/^/    - /' >> $GITHUB_STEP_SUMMARY
                        fi
+                       
                        if [ -n "$DIFFERENT_FILES" ]; then
                          DIFFERENT_COUNT=$(echo "$DIFFERENT_FILES" | wc -w 2>/dev/null || echo "0")
-                         echo "  - Different content: $DIFFERENT_COUNT" >> $GITHUB_STEP_SUMMARY
-                         echo "$DIFFERENT_FILES" | tr ' ' '\n' | sed 's/^/    - /' >> $GITHUB_STEP_SUMMARY
+                         echo "**Different content:** $DIFFERENT_COUNT" >> $GITHUB_STEP_SUMMARY
+                         echo "$DIFFERENT_FILES" | tr ' ' '\n' | sed 's/^/- /' >> $GITHUB_STEP_SUMMARY
                          echo "  📄 Different files count: $DIFFERENT_COUNT"
                        fi
+                       
                        BRANCHES_WITH_DIFFERENCES=$((BRANCHES_WITH_DIFFERENCES + 1))
                        echo "  ⚠️  Added to summary: Has differences"
-                       # Важное исправление: добавляем разделительную пустую строку
                        echo "" >> $GITHUB_STEP_SUMMARY
                      fi
                                  else
                    # Форматирование для веток без .github
-                   echo "• **$branch** - No .github folder" >> $GITHUB_STEP_SUMMARY
+                   echo "#### $branch" >> $GITHUB_STEP_SUMMARY
+                   echo "---" >> $GITHUB_STEP_SUMMARY
+                   echo "**No .github folder**" >> $GITHUB_STEP_SUMMARY
                    BRANCHES_WITHOUT_GITHUB=$((BRANCHES_WITHOUT_GITHUB + 1))
                    echo "  📁 Added to summary: No .github folder"
-                   # Добавляем разделительную строку
                    echo "" >> $GITHUB_STEP_SUMMARY
                  fi
               else

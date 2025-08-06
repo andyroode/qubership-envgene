@@ -103,7 +103,11 @@ jobs:
           for branch in "${FILTERED_BRANCHES[@]}"; do
             echo ""
             echo "=========================================="
-            echo "🔄 Processing branch: $branch"
+            if [ "$CHECK_ONLY" = "true" ]; then
+              echo "🔍 Checking branch: $branch"
+            else
+              echo "🔄 Processing branch: $branch"
+            fi
             echo "=========================================="
               
               # Check if branch exists
@@ -307,11 +311,19 @@ jobs:
               fi
               
               echo "=========================================="
-              echo "Finished processing branch: $branch"
+              if [ "$CHECK_ONLY" = "true" ]; then
+                echo "Finished checking branch: $branch"
+              else
+                echo "Finished processing branch: $branch"
+              fi
               echo "=========================================="
           done
           
           echo ""
           echo "=========================================="
-          echo "🎉 Sync process completed!"
+          if [ "$CHECK_ONLY" = "true" ]; then
+            echo "🎉 Check process completed!"
+          else
+            echo "🎉 Sync process completed!"
+          fi
           echo "==========================================" 

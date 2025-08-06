@@ -323,7 +323,88 @@ jobs:
           echo "=========================================="
           if [ "$CHECK_ONLY" = "true" ]; then
             echo "🎉 Check process completed!"
+            
+            # Create summary for check mode
+            echo "## 📊 GitHub Folder Sync Check Summary" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Mode:** Check Only (No changes made)" >> $GITHUB_STEP_SUMMARY
+            echo "**Branches processed:** ${#FILTERED_BRANCHES[@]}" >> $GITHUB_STEP_SUMMARY
+            if [ -n "$EXCLUDE_BRANCHES" ]; then
+              echo "**Excluded branches:** $EXCLUDE_BRANCHES" >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+            
+            # Initialize summary variables
+            TOTAL_BRANCHES=${#FILTERED_BRANCHES[@]}
+            UP_TO_DATE_BRANCHES=0
+            BRANCHES_WITH_DIFFERENCES=0
+            BRANCHES_WITHOUT_GITHUB=0
+            
+            # Process each branch for summary
+            for branch in "${FILTERED_BRANCHES[@]}"; do
+              if git ls-remote --heads origin "$branch" | grep -q "$branch"; then
+                if git ls-tree -r --name-only "origin/$branch" | grep -q "^\.github/"; then
+                  # Get list of .github files in main (excluding sync-github-folder.yml)
+                  MAIN_GITHUB_FILES=$(git ls-tree -r --name-only origin/main | grep "^\.github/" | grep -v "sync-github-folder.yml" | sort)
+                  
+                  # Get list of .github files in target branch
+                  TARGET_GITHUB_FILES=$(git ls-tree -r --name-only "origin/$branch" | grep "^\.github/" | sort)
+                  
+                  # Find differences
+                  MISSING_FILES=$(comm -23 <(echo "$MAIN_GITHUB_FILES") <(echo "$TARGET_GITHUB_FILES"))
+                  EXTRA_FILES=$(comm -13 <(echo "$MAIN_GITHUB_FILES") <(echo "$TARGET_GITHUB_FILES"))
+                  
+                  # Check for content differences in common files
+                  DIFFERENT_FILES=""
+                  for file in $(comm -12 <(echo "$MAIN_GITHUB_FILES") <(echo "$TARGET_GITHUB_FILES")); do
+                    if ! git diff --quiet "origin/main:$file" "origin/$branch:$file" 2>/dev/null; then
+                      DIFFERENT_FILES="$DIFFERENT_FILES $file"
+                    fi
+                  done
+                  
+                  # Add to summary
+                  if [ -z "$MISSING_FILES" ] && [ -z "$EXTRA_FILES" ] && [ -z "$DIFFERENT_FILES" ]; then
+                    echo "✅ **$branch** - Up to date" >> $GITHUB_STEP_SUMMARY
+                    ((UP_TO_DATE_BRANCHES++))
+                  else
+                    echo "⚠️ **$branch** - Has differences:" >> $GITHUB_STEP_SUMMARY
+                    if [ -n "$MISSING_FILES" ]; then
+                      echo "   - Missing files: $(echo "$MISSING_FILES" | wc -l)" >> $GITHUB_STEP_SUMMARY
+                    fi
+                    if [ -n "$EXTRA_FILES" ]; then
+                      echo "   - Extra files: $(echo "$EXTRA_FILES" | wc -l)" >> $GITHUB_STEP_SUMMARY
+                    fi
+                    if [ -n "$DIFFERENT_FILES" ]; then
+                      echo "   - Different content: $(echo "$DIFFERENT_FILES" | wc -w)" >> $GITHUB_STEP_SUMMARY
+                    fi
+                    ((BRANCHES_WITH_DIFFERENCES++))
+                  fi
+                else
+                  echo "📁 **$branch** - No .github folder" >> $GITHUB_STEP_SUMMARY
+                  ((BRANCHES_WITHOUT_GITHUB++))
+                fi
+              fi
+            done
+            
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "### 📈 Summary Statistics" >> $GITHUB_STEP_SUMMARY
+            echo "- **Total branches:** $TOTAL_BRANCHES" >> $GITHUB_STEP_SUMMARY
+            echo "- **Up to date:** $UP_TO_DATE_BRANCHES" >> $GITHUB_STEP_SUMMARY
+            echo "- **With differences:** $BRANCHES_WITH_DIFFERENCES" >> $GITHUB_STEP_SUMMARY
+            echo "- **Without .github folder:** $BRANCHES_WITHOUT_GITHUB" >> $GITHUB_STEP_SUMMARY
+            
           else
             echo "🎉 Sync process completed!"
+            
+            # Create summary for sync mode
+            echo "## 🔄 GitHub Folder Sync Summary" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Mode:** Sync (Changes applied)" >> $GITHUB_STEP_SUMMARY
+            echo "**Branches processed:** ${#FILTERED_BRANCHES[@]}" >> $GITHUB_STEP_SUMMARY
+            if [ -n "$EXCLUDE_BRANCHES" ]; then
+              echo "**Excluded branches:** $EXCLUDE_BRANCHES" >> $GITHUB_STEP_SUMMARY
+            fi
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "> Note: Detailed sync results are shown in the logs above." >> $GITHUB_STEP_SUMMARY
           fi
           echo "==========================================" 

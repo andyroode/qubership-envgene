@@ -9,6 +9,10 @@ on:
         description: 'Target branches to sync (comma-separated, leave empty for all branches)'
         required: false
         default: ''
+      exclude_branch:
+        description: 'Branches to exclude from sync (comma-separated)'
+        required: false
+        default: ''
       force_sync:
         description: 'Sync mode'
         required: false
@@ -17,11 +21,6 @@ on:
           - 'false'
           - 'true'
         default: 'false'
-  push:
-    branches:
-      - main
-    paths:
-      - '.github/**'
 
 jobs:
   sync-github-folder:
@@ -53,29 +52,59 @@ jobs:
           else
             TARGET_BRANCHES="${{ steps.get-branches.outputs.branches }}"
           fi
+          
+          # Process exclude branches
+          EXCLUDE_BRANCHES="${{ github.event.inputs.exclude_branch }}"
+          echo "exclude_branches=$EXCLUDE_BRANCHES" >> $GITHUB_OUTPUT
+          echo "Exclude branches: $EXCLUDE_BRANCHES"
+          
           echo "target_branches=$TARGET_BRANCHES" >> $GITHUB_OUTPUT
           echo "Target branches: $TARGET_BRANCHES"
 
       - name: Sync .github folder to each branch
         run: |
           TARGET_BRANCHES="${{ steps.parse-targets.outputs.target_branches }}"
+          EXCLUDE_BRANCHES="${{ steps.parse-targets.outputs.exclude_branches }}"
           FORCE_SYNC="${{ github.event.inputs.force_sync }}"
           
           # Convert comma-separated string to array
           IFS=',' read -ra BRANCH_ARRAY <<< "$TARGET_BRANCHES"
+          IFS=',' read -ra EXCLUDE_ARRAY <<< "$EXCLUDE_BRANCHES"
           
-          echo "=========================================="
-          echo "Starting sync process for ${#BRANCH_ARRAY[@]} branch(es)"
-          echo "Force sync mode: $FORCE_SYNC"
-          echo "=========================================="
-          
+          # Create a filtered array excluding specified branches
+          FILTERED_BRANCHES=()
           for branch in "${BRANCH_ARRAY[@]}"; do
             branch=$(echo "$branch" | xargs)  # Trim whitespace
             if [ -n "$branch" ]; then
-              echo ""
-              echo "=========================================="
-              echo "🔄 Processing branch: $branch"
-              echo "=========================================="
+              # Check if branch should be excluded
+              EXCLUDED=false
+              for exclude_branch in "${EXCLUDE_ARRAY[@]}"; do
+                exclude_branch=$(echo "$exclude_branch" | xargs)  # Trim whitespace
+                if [ "$branch" = "$exclude_branch" ]; then
+                  EXCLUDED=true
+                  break
+                fi
+              done
+              
+              if [ "$EXCLUDED" = false ]; then
+                FILTERED_BRANCHES+=("$branch")
+              else
+                echo "🚫 Excluding branch: $branch"
+              fi
+            fi
+          done
+          
+          echo "=========================================="
+          echo "Starting sync process for ${#FILTERED_BRANCHES[@]} branch(es)"
+          echo "Force sync mode: $FORCE_SYNC"
+          echo "Excluded branches: $EXCLUDE_BRANCHES"
+          echo "=========================================="
+          
+          for branch in "${FILTERED_BRANCHES[@]}"; do
+            echo ""
+            echo "=========================================="
+            echo "🔄 Processing branch: $branch"
+            echo "=========================================="
               
               # Check if branch exists
               if git ls-remote --heads origin "$branch" | grep -q "$branch"; then
@@ -224,7 +253,6 @@ jobs:
               echo "=========================================="
               echo "Finished processing branch: $branch"
               echo "=========================================="
-            fi
           done
           
           echo ""

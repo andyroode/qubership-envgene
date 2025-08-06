@@ -139,47 +139,47 @@ jobs:
                   if [ "$CHECK_ONLY" = "true" ]; then
                     echo "🔍 Check mode - analyzing differences for $branch..."
                     
-                    # Create a temporary branch to compare
-                    echo "📝 Creating temporary branch for comparison"
-                    git checkout -b "check-github-$branch" "origin/$branch"
+                    # Get list of .github files in main (excluding sync-github-folder.yml)
+                    echo "📋 Analyzing .github files in main branch..."
+                    MAIN_GITHUB_FILES=$(git ls-tree -r --name-only origin/main | grep "^\.github/" | grep -v "sync-github-folder.yml" | sort)
                     
-                    # Copy .github folder from main for comparison
-                    echo "📋 Copying .github folder from main for comparison"
-                    git checkout origin/main -- .github/
+                    # Get list of .github files in target branch
+                    echo "📋 Analyzing .github files in $branch branch..."
+                    TARGET_GITHUB_FILES=$(git ls-tree -r --name-only "origin/$branch" | grep "^\.github/" | sort)
                     
-                    # Remove sync-github-folder.yml for comparison
-                    if [ -f ".github/workflows/sync-github-folder.yml" ]; then
-                      echo "🗑️  Removing sync-github-folder.yml from comparison"
-                      git rm -f .github/workflows/sync-github-folder.yml
-                    fi
+                    # Find files that exist in main but not in target
+                    MISSING_FILES=$(comm -23 <(echo "$MAIN_GITHUB_FILES") <(echo "$TARGET_GITHUB_FILES"))
                     
-                    # Remove workflow files that don't exist in main
-                    echo "🧹 Cleaning up workflow files not present in main..."
-                    for workflow_file in .github/workflows/*.yml .github/workflows/*.yaml; do
-                      if [ -f "$workflow_file" ]; then
-                        workflow_name=$(basename "$workflow_file")
-                        if ! git ls-tree -r --name-only origin/main | grep -q "^\.github/workflows/$workflow_name$"; then
-                          echo "🗑️  Removing workflow not in main: $workflow_name"
-                          git rm -f "$workflow_file"
-                        fi
+                    # Find files that exist in target but not in main
+                    EXTRA_FILES=$(comm -13 <(echo "$MAIN_GITHUB_FILES") <(echo "$TARGET_GITHUB_FILES"))
+                    
+                    # Check for content differences in common files
+                    DIFFERENT_FILES=""
+                    for file in $(comm -12 <(echo "$MAIN_GITHUB_FILES") <(echo "$TARGET_GITHUB_FILES")); do
+                      if ! git diff --quiet "origin/main:$file" "origin/$branch:$file" 2>/dev/null; then
+                        DIFFERENT_FILES="$DIFFERENT_FILES $file"
                       fi
                     done
                     
-                    # Check if there are any differences
-                    if git diff --staged --quiet; then
+                    # Report findings
+                    if [ -z "$MISSING_FILES" ] && [ -z "$EXTRA_FILES" ] && [ -z "$DIFFERENT_FILES" ]; then
                       echo "✅ Branch $branch is up to date with main"
                     else
-                      echo "📄 Files that differ from main:"
-                      git diff --staged --name-only | sed 's/^/   - /'
+                      if [ -n "$MISSING_FILES" ]; then
+                        echo "📄 Files missing in $branch (would be added):"
+                        echo "$MISSING_FILES" | sed 's/^/   - /'
+                      fi
                       
-                      echo "📄 Detailed differences:"
-                      git diff --staged --stat
+                      if [ -n "$EXTRA_FILES" ]; then
+                        echo "📄 Files in $branch not in main (would be removed):"
+                        echo "$EXTRA_FILES" | sed 's/^/   - /'
+                      fi
+                      
+                      if [ -n "$DIFFERENT_FILES" ]; then
+                        echo "📄 Files with different content in $branch:"
+                        echo "$DIFFERENT_FILES" | sed 's/^/   - /'
+                      fi
                     fi
-                    
-                    # Cleanup
-                    git checkout main
-                    git branch -D "check-github-$branch"
-                    echo "🧹 Cleaned up temporary branch"
                     
                   else
                     # Normal sync mode
@@ -248,10 +248,10 @@ jobs:
                 else
                   echo "📁 .github folder doesn't exist in $branch"
                   
-                  if [ "$CHECK_ONLY" = "true" ]; then
-                    echo "🔍 Check mode - would create .github folder from main"
-                    echo "📄 Files that would be added:"
-                    git ls-tree -r --name-only origin/main | grep "^\.github/" | sed 's/^/   - /'
+                                     if [ "$CHECK_ONLY" = "true" ]; then
+                     echo "🔍 Check mode - .github folder doesn't exist in $branch"
+                     echo "📄 Files that would be added from main:"
+                     git ls-tree -r --name-only origin/main | grep "^\.github/" | grep -v "sync-github-folder.yml" | sed 's/^/   - /'
                   else
                     echo "📁 Creating .github folder in $branch..."
                     

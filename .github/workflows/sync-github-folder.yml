@@ -408,7 +408,7 @@ jobs:
                        if [ -n "$DIFFERENT_FILES" ]; then
                          DIFFERENT_COUNT=$(echo "$DIFFERENT_FILES" | wc -w 2>/dev/null || echo "0")
                          echo "   - Different content: $DIFFERENT_COUNT" >> $GITHUB_STEP_SUMMARY
-                         echo "$DIFFERENT_FILES" | sed 's/^/     - /' >> $GITHUB_STEP_SUMMARY
+                         echo "$DIFFERENT_FILES" | tr ' ' '\n' | sed 's/^/     - /' >> $GITHUB_STEP_SUMMARY
                          echo "  📄 Different files count: $DIFFERENT_COUNT"
                        fi
                        BRANCHES_WITH_DIFFERENCES=$((BRANCHES_WITH_DIFFERENCES + 1))

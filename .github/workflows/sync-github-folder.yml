@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       target_branches:
-        description: 'Target branches to sync (comma-separated, leave empty for all branches)'
+        description: 'Target branches to sync (comma-separated) or "ALL" for all branches'
         required: false
         default: ''
       exclude_branch:
@@ -47,10 +47,11 @@ jobs:
       - name: Parse target branches
         id: parse-targets
         run: |
-          if [ -n "${{ github.event.inputs.target_branches }}" ]; then
-            TARGET_BRANCHES="${{ github.event.inputs.target_branches }}"
-          else
+          # Check if user wants all branches
+          if [ "${{ github.event.inputs.target_branches }}" = "ALL" ]; then
             TARGET_BRANCHES="${{ steps.get-branches.outputs.branches }}"
+          else
+            TARGET_BRANCHES="${{ github.event.inputs.target_branches }}"
           fi
           
           # Process exclude branches
@@ -61,41 +62,51 @@ jobs:
           echo "target_branches=$TARGET_BRANCHES" >> $GITHUB_OUTPUT
           echo "Target branches: $TARGET_BRANCHES"
 
-      - name: Sync .github folder to each branch
-        run: |
-          set -e
-          trap 'echo "Error occurred at line $LINENO"' ERR
-          
-          TARGET_BRANCHES="${{ steps.parse-targets.outputs.target_branches }}"
-          EXCLUDE_BRANCHES="${{ steps.parse-targets.outputs.exclude_branches }}"
-          CHECK_ONLY="${{ github.event.inputs.check_only }}"
-          
-          # Convert comma-separated string to array
-          IFS=',' read -ra BRANCH_ARRAY <<< "$TARGET_BRANCHES"
-          IFS=',' read -ra EXCLUDE_ARRAY <<< "$EXCLUDE_BRANCHES"
-          
-          # Create a filtered array excluding specified branches
-          FILTERED_BRANCHES=()
-          for branch in "${BRANCH_ARRAY[@]}"; do
-            branch=$(echo "$branch" | xargs)  # Trim whitespace
-            if [ -n "$branch" ]; then
-              # Check if branch should be excluded
-              EXCLUDED=false
-              for exclude_branch in "${EXCLUDE_ARRAY[@]}"; do
-                exclude_branch=$(echo "$exclude_branch" | xargs)  # Trim whitespace
-                if [ "$branch" = "$exclude_branch" ]; then
-                  EXCLUDED=true
-                  break
-                fi
-              done
-              
-              if [ "$EXCLUDED" = false ]; then
-                FILTERED_BRANCHES+=("$branch")
+                    - name: Sync .github folder to each branch
+         run: |
+           set -e
+           trap 'echo "Error occurred at line $LINENO"' ERR
+           
+           TARGET_BRANCHES="${{ steps.parse-targets.outputs.target_branches }}"
+           EXCLUDE_BRANCHES="${{ steps.parse-targets.outputs.exclude_branches }}"
+           CHECK_ONLY="${{ github.event.inputs.check_only }}"
+           
+                       # Check if target_branches is provided (only fail if not in check_only mode)
+            if [ -z "$TARGET_BRANCHES" ]; then
+              if [ "$CHECK_ONLY" = "true" ]; then
+                echo "⚠️  Warning: target_branches is empty, but check_only mode is enabled. Proceeding with empty branch list."
               else
-                echo "🚫 Excluding branch: $branch"
+                echo "❌ Error: target_branches is required. Please provide branch names or 'ALL'."
+                exit 1
               fi
             fi
-          done
+           
+           # Convert comma-separated string to array
+           IFS=',' read -ra BRANCH_ARRAY <<< "$TARGET_BRANCHES"
+           IFS=',' read -ra EXCLUDE_ARRAY <<< "$EXCLUDE_BRANCHES"
+           
+           # Create a filtered array excluding specified branches
+           FILTERED_BRANCHES=()
+           for branch in "${BRANCH_ARRAY[@]}"; do
+             branch=$(echo "$branch" | xargs)  # Trim whitespace
+             if [ -n "$branch" ]; then
+               # Check if branch should be excluded
+               EXCLUDED=false
+               for exclude_branch in "${EXCLUDE_ARRAY[@]}"; do
+                 exclude_branch=$(echo "$exclude_branch" | xargs)  # Trim whitespace
+                 if [ "$branch" = "$exclude_branch" ]; then
+                   EXCLUDED=true
+                   break
+                 fi
+               done
+               
+               if [ "$EXCLUDED" = false ]; then
+                 FILTERED_BRANCHES+=("$branch")
+               else
+                 echo "🚫 Excluding branch: $branch"
+               fi
+             fi
+           done
           
           echo "=========================================="
           echo "Starting process for ${#FILTERED_BRANCHES[@]} branch(es)"
@@ -220,33 +231,44 @@ jobs:
                       fi
                     done
                     
-                    # Check if there are any changes
-                    if git diff --staged --quiet; then
-                      echo "ℹ️  No changes to sync for $branch"
-                      git checkout main
-                      git branch -D "sync-github-$branch"
-                      echo "🧹 Cleaned up temporary branch"
-                    else
-                      # Show what files will be changed
-                      echo "📄 Files to be updated:"
-                      git diff --staged --name-only | sed 's/^/   - /'
-                      
-                      # Commit and push changes
-                      echo "💾 Committing changes..."
-                      git config user.name "github-actions[bot]"
-                      git config user.email "github-actions[bot]@users.noreply.github.com"
-                      git commit -m "ci: sync .github folder from main branch"
-                      
-                      # Push to target branch
-                      echo "🚀 Pushing changes to $branch..."
-                      git push origin "sync-github-$branch:$branch"
-                      
-                      # Cleanup
-                      git checkout main
-                      git branch -D "sync-github-$branch"
-                      
-                      echo "✅ Successfully synced .github folder to $branch"
-                    fi
+                                         # Check if there are any changes
+                     if git diff --staged --quiet; then
+                       echo "ℹ️  No changes to sync for $branch"
+                       git checkout main
+                       git branch -D "sync-github-$branch"
+                       echo "🧹 Cleaned up temporary branch"
+                     else
+                       # Show what files will be changed
+                       echo "📄 Files to be updated:"
+                       git diff --staged --name-only | sed 's/^/   - /'
+                       
+                       # Store files for summary
+                       UPDATED_FILES=$(git diff --staged --name-only)
+                       
+                       # Commit and push changes
+                       echo "💾 Committing changes..."
+                       git config user.name "github-actions[bot]"
+                       git config user.email "github-actions[bot]@users.noreply.github.com"
+                       git commit -m "ci: sync .github folder from main branch"
+                       
+                       # Push to target branch
+                       echo "🚀 Pushing changes to $branch..."
+                       git push origin "sync-github-$branch:$branch"
+                       
+                       # Cleanup
+                       git checkout main
+                       git branch -D "sync-github-$branch"
+                       
+                       echo "✅ Successfully synced .github folder to $branch"
+                       
+                       # Add to summary
+                       echo "---" >> $GITHUB_STEP_SUMMARY
+                       echo "#### $branch" >> $GITHUB_STEP_SUMMARY
+                       echo "**Files updated:** $(echo "$UPDATED_FILES" | wc -l 2>/dev/null || echo "0")" >> $GITHUB_STEP_SUMMARY
+                       echo "$UPDATED_FILES" | sed 's/^/- /' >> $GITHUB_STEP_SUMMARY
+                       echo "---" >> $GITHUB_STEP_SUMMARY
+                       echo "" >> $GITHUB_STEP_SUMMARY
+                     fi
                   else
                     echo "⏭️  Skipping $branch - target branch .github files are newer or same age"
                     echo "   Main: $MAIN_GITHUB_DATE"
@@ -289,25 +311,36 @@ jobs:
                     fi
                   done
                   
-                  # Show what files will be added
-                  echo "📄 Files to be added:"
-                  git diff --staged --name-only | sed 's/^/   - /'
-                  
-                  # Commit and push changes
-                  echo "💾 Committing changes..."
-                  git config user.name "github-actions[bot]"
-                  git config user.email "github-actions[bot]@users.noreply.github.com"
-                  git commit -m "ci: add .github folder from main branch"
-                  
-                  # Push to target branch
-                  echo "🚀 Pushing changes to $branch..."
-                  git push origin "sync-github-$branch:$branch"
-                  
-                  # Cleanup
-                  git checkout main
-                  git branch -D "sync-github-$branch"
-                  
-                  echo "✅ Successfully created .github folder in $branch"
+                                     # Show what files will be added
+                   echo "📄 Files to be added:"
+                   git diff --staged --name-only | sed 's/^/   - /'
+                   
+                   # Store files for summary
+                   ADDED_FILES=$(git diff --staged --name-only)
+                   
+                   # Commit and push changes
+                   echo "💾 Committing changes..."
+                   git config user.name "github-actions[bot]"
+                   git config user.email "github-actions[bot]@users.noreply.github.com"
+                   git commit -m "ci: add .github folder from main branch"
+                   
+                   # Push to target branch
+                   echo "🚀 Pushing changes to $branch..."
+                   git push origin "sync-github-$branch:$branch"
+                   
+                   # Cleanup
+                   git checkout main
+                   git branch -D "sync-github-$branch"
+                   
+                   echo "✅ Successfully created .github folder in $branch"
+                   
+                   # Add to summary
+                   echo "---" >> $GITHUB_STEP_SUMMARY
+                   echo "#### $branch" >> $GITHUB_STEP_SUMMARY
+                   echo "**Files added:** $(echo "$ADDED_FILES" | wc -l 2>/dev/null || echo "0")" >> $GITHUB_STEP_SUMMARY
+                   echo "$ADDED_FILES" | sed 's/^/- /' >> $GITHUB_STEP_SUMMARY
+                   echo "---" >> $GITHUB_STEP_SUMMARY
+                   echo "" >> $GITHUB_STEP_SUMMARY
                 fi
               fi
             else

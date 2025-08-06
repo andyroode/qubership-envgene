@@ -74,7 +74,8 @@ jobs:
           # Check if target_branches is provided (only fail if not in check_only mode)
           if [ -z "$TARGET_BRANCHES" ]; then
             if [ "$CHECK_ONLY" = "true" ]; then
-              echo "⚠️  Warning: target_branches is empty, but check_only mode is enabled. Proceeding with empty branch list."
+              echo "⚠️  Warning: target_branches is empty, but check_only mode is enabled. Using all branches except main."
+              TARGET_BRANCHES="${{ steps.get-branches.outputs.branches }}"
             else
               echo "❌ Error: target_branches is required. Please provide branch names or 'ALL'."
               exit 1

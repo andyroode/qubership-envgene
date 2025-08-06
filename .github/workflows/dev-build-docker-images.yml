@@ -38,9 +38,20 @@ env:
   REGISTRY: ghcr.io
   CI_PROJECT_DIR: ${{ github.workspace }}
 
+permissions:
+  contents: read
+  packages: write
+  attestations: write
+  id-token: write
+
 jobs:
   tests:
     if: github.event_name == 'workflow_dispatch' || contains(github.event.head_commit.message, 'feat:') || contains(github.event.head_commit.message, 'fix:') || contains(github.event.head_commit.message, 'BREAKING CHANGE')
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
     uses: ./.github/workflows/perform_tests.yml
 
   build-qubership-gcip:

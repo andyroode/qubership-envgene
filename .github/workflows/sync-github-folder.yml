@@ -78,6 +78,11 @@ jobs:
               TARGET_BRANCHES="${{ steps.get-branches.outputs.branches }}"
             else
               echo "❌ Error: target_branches is required. Please provide branch names or 'ALL'."
+              echo "## ❌ Workflow Error" >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "**Error:** target_branches is required. Please provide branch names or 'ALL'." >> $GITHUB_STEP_SUMMARY
+              echo "" >> $GITHUB_STEP_SUMMARY
+              echo "**Solution:** Please specify target branches in the workflow input or use 'ALL' to process all branches." >> $GITHUB_STEP_SUMMARY
               exit 1
             fi
           fi

@@ -5,6 +5,12 @@ run-name: "Smoke tests on commit ${{ github.sha }}"
 on:
   workflow_dispatch:
   workflow_call:
+    inputs:
+      force-run:
+        description: 'Force run tests regardless of commit message'
+        required: false
+        default: false
+        type: boolean
   pull_request:
     branches:
       - '**'
@@ -20,7 +26,7 @@ jobs:
     runs-on: ubuntu-latest
     if: |
       github.event_name == 'workflow_dispatch' ||
-      github.event_name == 'workflow_call' ||
+      (github.event_name == 'workflow_call' && (inputs.force-run == 'true' || inputs.force-run == '')) ||
       (github.event_name == 'pull_request') ||
       (github.event_name == 'push' && 
        github.ref != 'refs/heads/main' &&

@@ -53,6 +53,8 @@ jobs:
       attestations: write
       id-token: write
     uses: ./.github/workflows/perform_tests.yml
+    with:
+      force-run: true
 
   build-qubership-gcip:
     needs: [tests]

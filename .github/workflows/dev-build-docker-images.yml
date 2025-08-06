@@ -52,18 +52,9 @@ jobs:
       packages: write
       attestations: write
       id-token: write
-    runs-on: ubuntu-latest
-    steps:
-      - name: Debug event info
-        run: |
-          echo "Event name: ${{ github.event_name }}"
-          echo "Commit message: ${{ github.event.head_commit.message }}"
-          echo "Branch: ${{ github.ref }}"
-      
-      - name: Run Tests
-        uses: ./.github/workflows/perform_tests.yml
-        with:
-          force-run: true
+    uses: ./.github/workflows/perform_tests.yml
+    with:
+      force-run: true
 
   build-qubership-gcip:
     needs: [tests]

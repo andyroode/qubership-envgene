@@ -422,12 +422,18 @@ jobs:
                        echo "" >> $GITHUB_STEP_SUMMARY
                      fi
                      
-                     if [ -n "$EXTRA_FILES" ]; then
-                       EXTRA_COUNT=$(echo "$EXTRA_FILES" | wc -l 2>/dev/null || echo "0")
-                       echo "Extra files: $EXTRA_COUNT" >> $GITHUB_STEP_SUMMARY
-                       echo "$EXTRA_FILES" | sed 's/^/- /' >> $GITHUB_STEP_SUMMARY
-                       echo "" >> $GITHUB_STEP_SUMMARY
-                     fi
+                                           if [ -n "$EXTRA_FILES" ]; then
+                        EXTRA_COUNT=$(echo "$EXTRA_FILES" | wc -l 2>/dev/null || echo "0")
+                        echo "Extra files: $EXTRA_COUNT" >> $GITHUB_STEP_SUMMARY
+                        echo "$EXTRA_FILES" | while read -r file; do
+                          if [ "$file" = ".github/workflows/sync-github-folder.yml" ]; then
+                            echo "- $file - should exist only in MAIN" >> $GITHUB_STEP_SUMMARY
+                          else
+                            echo "- $file" >> $GITHUB_STEP_SUMMARY
+                          fi
+                        done
+                        echo "" >> $GITHUB_STEP_SUMMARY
+                      fi
                      
                      if [ -n "$DIFFERENT_FILES" ]; then
                         DIFFERENT_COUNT=$(echo "$DIFFERENT_FILES" | wc -w 2>/dev/null || echo "0")

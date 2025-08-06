@@ -351,32 +351,37 @@ jobs:
                  echo "  ✅ Branch exists"
                  if git ls-tree -r --name-only "origin/$branch" | grep -q "^\.github/"; then
                    echo "  📁 .github folder exists"
-                   # Get list of .github files in main (excluding sync-github-folder.yml)
-                   MAIN_GITHUB_FILES=$(git ls-tree -r --name-only origin/main | grep "^\.github/" | grep -v "sync-github-folder.yml" | sort)
-                   echo "  📋 Main files count: $(echo "$MAIN_GITHUB_FILES" | wc -l)"
+                                       # Get list of .github files in main (excluding sync-github-folder.yml)
+                    MAIN_GITHUB_FILES=$(git ls-tree -r --name-only origin/main | grep "^\.github/" | grep -v "sync-github-folder.yml" | sort)
+                    MAIN_COUNT=$(echo "$MAIN_GITHUB_FILES" | wc -l 2>/dev/null || echo "0")
+                    echo "  📋 Main files count: $MAIN_COUNT"
+                    
+                    # Get list of .github files in target branch
+                    TARGET_GITHUB_FILES=$(git ls-tree -r --name-only "origin/$branch" | grep "^\.github/" | sort)
+                    TARGET_COUNT=$(echo "$TARGET_GITHUB_FILES" | wc -l 2>/dev/null || echo "0")
+                    echo "  📋 Target files count: $TARGET_COUNT"
+                    
+                    # Find differences
+                    MISSING_FILES=$(comm -23 <(echo "$MAIN_GITHUB_FILES") <(echo "$TARGET_GITHUB_FILES") 2>/dev/null || echo "")
+                    EXTRA_FILES=$(comm -13 <(echo "$MAIN_GITHUB_FILES") <(echo "$TARGET_GITHUB_FILES") 2>/dev/null || echo "")
+                    
+                    # Check for content differences in common files
+                    DIFFERENT_FILES=""
+                    COMMON_FILES=$(comm -12 <(echo "$MAIN_GITHUB_FILES") <(echo "$TARGET_GITHUB_FILES") 2>/dev/null || echo "")
+                    COMMON_COUNT=$(echo "$COMMON_FILES" | wc -w 2>/dev/null || echo "0")
+                    echo "  🔍 Common files count: $COMMON_COUNT"
                    
-                   # Get list of .github files in target branch
-                   TARGET_GITHUB_FILES=$(git ls-tree -r --name-only "origin/$branch" | grep "^\.github/" | sort)
-                   echo "  📋 Target files count: $(echo "$TARGET_GITHUB_FILES" | wc -l)"
-                   
-                   # Find differences
-                   MISSING_FILES=$(comm -23 <(echo "$MAIN_GITHUB_FILES") <(echo "$TARGET_GITHUB_FILES") 2>/dev/null || echo "")
-                   EXTRA_FILES=$(comm -13 <(echo "$MAIN_GITHUB_FILES") <(echo "$TARGET_GITHUB_FILES") 2>/dev/null || echo "")
-                   
-                   # Check for content differences in common files
-                   DIFFERENT_FILES=""
-                   COMMON_FILES=$(comm -12 <(echo "$MAIN_GITHUB_FILES") <(echo "$TARGET_GITHUB_FILES") 2>/dev/null || echo "")
-                   echo "  🔍 Common files count: $(echo "$COMMON_FILES" | wc -w)"
-                   
-                   for file in $COMMON_FILES; do
-                     if [ -n "$file" ]; then
-                       echo "  🔍 Checking file: $file"
-                       if ! git diff --quiet "origin/main:$file" "origin/$branch:$file" 2>/dev/null; then
-                         echo "  ⚠️  File differs: $file"
-                         DIFFERENT_FILES="$DIFFERENT_FILES $file"
-                       fi
-                     fi
-                   done
+                                       for file in $COMMON_FILES; do
+                      if [ -n "$file" ]; then
+                        echo "  🔍 Checking file: $file"
+                        if git diff --quiet "origin/main:$file" "origin/$branch:$file" 2>/dev/null; then
+                          echo "  ✅ File is identical: $file"
+                        else
+                          echo "  ⚠️  File differs: $file"
+                          DIFFERENT_FILES="$DIFFERENT_FILES $file"
+                        fi
+                      fi
+                    done
                    
                    # Add to summary
                    if [ -z "$MISSING_FILES" ] && [ -z "$EXTRA_FILES" ] && [ -z "$DIFFERENT_FILES" ]; then
@@ -385,21 +390,21 @@ jobs:
                      echo "  ✅ Added to summary: Up to date"
                    else
                      echo "⚠️ **$branch** - Has differences:" >> $GITHUB_STEP_SUMMARY
-                     if [ -n "$MISSING_FILES" ]; then
-                       MISSING_COUNT=$(echo "$MISSING_FILES" | wc -l)
-                       echo "   - Missing files: $MISSING_COUNT" >> $GITHUB_STEP_SUMMARY
-                       echo "  📄 Missing files count: $MISSING_COUNT"
-                     fi
-                     if [ -n "$EXTRA_FILES" ]; then
-                       EXTRA_COUNT=$(echo "$EXTRA_FILES" | wc -l)
-                       echo "   - Extra files: $EXTRA_COUNT" >> $GITHUB_STEP_SUMMARY
-                       echo "  📄 Extra files count: $EXTRA_COUNT"
-                     fi
-                     if [ -n "$DIFFERENT_FILES" ]; then
-                       DIFFERENT_COUNT=$(echo "$DIFFERENT_FILES" | wc -w)
-                       echo "   - Different content: $DIFFERENT_COUNT" >> $GITHUB_STEP_SUMMARY
-                       echo "  📄 Different files count: $DIFFERENT_COUNT"
-                     fi
+                                           if [ -n "$MISSING_FILES" ]; then
+                        MISSING_COUNT=$(echo "$MISSING_FILES" | wc -l 2>/dev/null || echo "0")
+                        echo "   - Missing files: $MISSING_COUNT" >> $GITHUB_STEP_SUMMARY
+                        echo "  📄 Missing files count: $MISSING_COUNT"
+                      fi
+                      if [ -n "$EXTRA_FILES" ]; then
+                        EXTRA_COUNT=$(echo "$EXTRA_FILES" | wc -l 2>/dev/null || echo "0")
+                        echo "   - Extra files: $EXTRA_COUNT" >> $GITHUB_STEP_SUMMARY
+                        echo "  📄 Extra files count: $EXTRA_COUNT"
+                      fi
+                      if [ -n "$DIFFERENT_FILES" ]; then
+                        DIFFERENT_COUNT=$(echo "$DIFFERENT_FILES" | wc -w 2>/dev/null || echo "0")
+                        echo "   - Different content: $DIFFERENT_COUNT" >> $GITHUB_STEP_SUMMARY
+                        echo "  📄 Different files count: $DIFFERENT_COUNT"
+                      fi
                      ((BRANCHES_WITH_DIFFERENCES++))
                      echo "  ⚠️  Added to summary: Has differences"
                    fi

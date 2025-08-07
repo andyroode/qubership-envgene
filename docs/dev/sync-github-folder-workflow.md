@@ -1,0 +1,242 @@
+# GitHub Folder Sync Workflow
+
+## Overview
+
+The `sync-github-folder.yml` workflow is a powerful tool designed to synchronize the `.github` folder across multiple branches in a repository. This workflow ensures that GitHub Actions, workflows, and other GitHub-specific configurations are consistent across all branches by copying the `.github` folder from the main branch to target branches.
+
+## Purpose
+
+This workflow serves several important purposes:
+
+- **Consistency**: Ensures all branches have the same GitHub Actions workflows and configurations
+- **Maintenance**: Reduces manual effort in keeping multiple branches synchronized
+- **Quality Assurance**: Prevents issues caused by outdated or missing GitHub configurations
+- **Automation**: Automates the process of propagating GitHub folder changes across branches
+
+## Workflow Features
+
+### Input Parameters
+
+The workflow accepts the following input parameters:
+
+| Parameter | Type | Required | Default | Description |
+|-----------|------|----------|---------|-------------|
+| `target_branches` | string | No | '' | Comma-separated list of target branches or "ALL" for all branches |
+| `exclude_branch` | string | No | '' | Comma-separated list of branches to exclude from sync |
+| `check_only` | choice | No | 'false' | Check mode - show differences without syncing (true/false) |
+
+### Modes of Operation
+
+#### 1. Sync Mode (Default)
+- **Purpose**: Actually synchronizes the `.github` folder to target branches
+- **Behavior**: Creates commits and pushes changes to target branches
+- **Use Case**: When you want to update branches with the latest GitHub configurations
+
+#### 2. Check Mode
+- **Purpose**: Analyzes differences without making any changes
+- **Behavior**: Shows what would be changed without actually syncing
+- **Use Case**: When you want to preview what changes would be made before syncing
+
+## How It Works
+
+### Branch Discovery
+1. **Automatic Detection**: The workflow automatically discovers all remote branches (excluding main)
+2. **Manual Specification**: You can specify specific branches or use "ALL" for all branches
+3. **Exclusion Support**: You can exclude specific branches from the sync process
+
+### Sync Process
+
+#### For Existing .github Folders
+1. **Timestamp Comparison**: Compares the last modification time of `.github` files between main and target branches
+2. **Conditional Sync**: Only syncs if main branch has newer `.github` files
+3. **File Operations**:
+   - Copies `.github` folder from main branch
+   - Excludes `sync-github-folder.yml` from target branches (keeps it only in main)
+   - Removes workflow files that don't exist in main
+   - Creates a temporary branch for changes
+   - Commits and pushes changes
+
+#### For Missing .github Folders
+1. **Creation**: Creates the `.github` folder in target branches
+2. **Initial Setup**: Copies all necessary files from main branch
+3. **Cleanup**: Ensures only files that exist in main are included
+
+### Safety Features
+
+- **Temporary Branches**: Uses temporary branches (`sync-github-{branch}`) for changes
+- **Cleanup**: Automatically removes temporary branches after sync
+- **Error Handling**: Comprehensive error handling and reporting
+- **Dry Run**: Check mode allows previewing changes without applying them
+
+## Usage Examples
+
+### Sync All Branches
+```yaml
+# Trigger workflow with default settings
+# This will sync all branches except main
+```
+
+### Sync Specific Branches
+```yaml
+# Target specific branches
+target_branches: "feature/new-ui, bugfix/login-issue, develop"
+```
+
+### Exclude Branches
+```yaml
+# Sync all branches except specific ones
+target_branches: "ALL"
+exclude_branch: "experimental, deprecated-feature"
+```
+
+### Check Mode
+```yaml
+# Preview changes without applying them
+check_only: "true"
+target_branches: "ALL"
+```
+
+## Output and Reporting
+
+### Console Output
+The workflow provides detailed console output including:
+- Branch processing status
+- File operations performed
+- Timestamps and commit information
+- Error messages and warnings
+
+### GitHub Step Summary
+The workflow creates a comprehensive summary in the GitHub Actions interface:
+- **Sync Mode**: Lists files updated for each branch
+- **Check Mode**: Shows differences, missing files, and extra files for each branch
+- **Statistics**: Provides summary statistics for processed branches
+
+### Summary Statistics (Check Mode)
+- Total branches processed
+- Branches up to date
+- Branches with differences
+- Branches without .github folder
+
+## File Handling
+
+### Included Files
+- All files in `.github/` directory from main branch
+- Workflows, actions, and configurations
+- Templates and reusable components
+
+### Excluded Files
+- `sync-github-folder.yml` (kept only in main branch)
+- Workflow files that don't exist in main branch
+- Files specified in exclusion patterns
+
+### File Operations
+- **Copy**: Files from main to target branches
+- **Remove**: Files that shouldn't exist in target branches
+- **Update**: Files with different content
+- **Create**: Missing .github folders
+
+## Best Practices
+
+### When to Use
+- After updating GitHub Actions workflows in main branch
+- When creating new branches that need GitHub configurations
+- During repository maintenance and cleanup
+- Before major releases to ensure consistency
+
+### When Not to Use
+- During active development on target branches
+- When branches have custom GitHub configurations that shouldn't be overwritten
+- Immediately after creating pull requests (to avoid conflicts)
+
+### Recommended Workflow
+1. **Check Mode First**: Always run in check mode first to preview changes
+2. **Review Changes**: Examine the summary to understand what will be changed
+3. **Sync Mode**: Run in sync mode to apply changes
+4. **Verify**: Check that the changes were applied correctly
+
+## Troubleshooting
+
+### Common Issues
+
+#### Branch Not Found
+- **Cause**: Target branch doesn't exist
+- **Solution**: Verify branch name and ensure it exists in the repository
+
+#### Permission Errors
+- **Cause**: Insufficient permissions to push to branches
+- **Solution**: Ensure the workflow has write permissions to the repository
+
+#### Merge Conflicts
+- **Cause**: Target branch has conflicting changes
+- **Solution**: Resolve conflicts manually or rebase the target branch
+
+#### No Changes Applied
+- **Cause**: Target branch already has up-to-date .github folder
+- **Solution**: This is normal behavior - the workflow only syncs when needed
+
+### Error Messages
+
+#### "target_branches is required"
+- **Solution**: Provide branch names or use "ALL", or enable check_only mode
+
+#### "Branch does not exist"
+- **Solution**: Verify the branch name and ensure it exists in the repository
+
+#### "No changes to sync"
+- **Solution**: This is informational - the branch is already up to date
+
+## Security Considerations
+
+### Permissions
+- **Contents**: Write permission required for pushing changes
+- **Actions**: Read permission for accessing workflow information
+
+### Authentication
+- Uses `GITHUB_TOKEN` for authentication
+- Runs with GitHub Actions bot identity
+- Commits are made with `github-actions[bot]` user
+
+### Safety Measures
+- Uses temporary branches for changes
+- Automatic cleanup of temporary branches
+- Comprehensive error handling
+- Check mode for previewing changes
+
+## Integration with CI/CD
+
+### Triggering
+- **Manual**: Can be triggered manually via GitHub Actions UI
+- **Scheduled**: Can be integrated into scheduled workflows
+- **Event-based**: Can be triggered by specific events
+
+### Integration Points
+- **Pre-deployment**: Run before deploying to ensure consistency
+- **Release preparation**: Run before creating releases
+- **Branch maintenance**: Regular maintenance task
+
+## Monitoring and Maintenance
+
+### Monitoring
+- Check workflow execution logs for errors
+- Review step summaries for sync results
+- Monitor branch consistency over time
+
+### Maintenance
+- Regular review of excluded branches
+- Update workflow as needed for new requirements
+- Monitor for new GitHub features that might affect the workflow
+
+## Future Enhancements
+
+### Potential Improvements
+- **Selective File Sync**: Sync specific files or directories
+- **Conflict Resolution**: Automatic conflict resolution strategies
+- **Rollback Capability**: Ability to revert sync changes
+- **Advanced Filtering**: More sophisticated branch filtering options
+- **Integration APIs**: API endpoints for external triggering
+
+### Feature Requests
+- **Custom Commit Messages**: Allow custom commit message templates
+- **Branch Protection**: Respect branch protection rules
+- **Notification Integration**: Slack/Teams notifications for sync results
+- **Audit Trail**: Detailed audit trail of sync operations 

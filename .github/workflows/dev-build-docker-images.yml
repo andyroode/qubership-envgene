@@ -54,7 +54,10 @@ jobs:
     uses: ./.github/workflows/pr-conventional-commits.yaml
 
   tests:
-    if: github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (contains(github.event.head_commit.message, 'feat:') || contains(github.event.head_commit.message, 'fix:') || contains(github.event.head_commit.message, 'BREAKING CHANGE')))
+    needs: [conventional-commits]
+    if: |
+      (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (contains(github.event.head_commit.message, 'feat:') || contains(github.event.head_commit.message, 'fix:') || contains(github.event.head_commit.message, 'BREAKING CHANGE')))) &&
+      (needs.conventional-commits.result == 'success' || needs.conventional-commits.result == 'skipped')
     runs-on: ubuntu-latest
     container:
       image: python:3.10-slim-bookworm

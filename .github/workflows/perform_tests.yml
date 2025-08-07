@@ -23,14 +23,15 @@ jobs:
     needs: [conventional-commits]
     runs-on: ubuntu-latest
     if: |
-      github.event_name == 'workflow_dispatch' ||
+      (github.event_name == 'workflow_dispatch' ||
       github.event_name == 'workflow_call' ||
       (github.event_name == 'pull_request') ||
       (github.event_name == 'push' && 
        github.ref != 'refs/heads/main' &&
        !contains(github.event.head_commit.message, 'fix') && 
        !contains(github.event.head_commit.message, 'feat') && 
-       !contains(github.event.head_commit.message, 'breaking change'))
+       !contains(github.event.head_commit.message, 'breaking change'))) &&
+      (needs.conventional-commits.result == 'success' || needs.conventional-commits.result == 'skipped')
     container:
       image: python:3.10-slim-bookworm
     steps:

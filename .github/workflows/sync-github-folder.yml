@@ -22,7 +22,7 @@ on:
         required: false
         default: ''
       include_files:
-        description: 'Specific files/folders to sync (comma-separated, e.g., "actions,workflows/perform_tests.yml") or empty for all .github files'
+        description: 'Specific files/folders to sync (comma-separated, e.g., "actions,workflows/perform_tests.yml"), "ALL" for all .github files, or empty (only when target_branches is empty or "ALL")'
         required: false
         default: ''
 
@@ -93,6 +93,21 @@ jobs:
               echo "- Enable check_only mode to check all branches without syncing" >> $GITHUB_STEP_SUMMARY
               exit 1
             fi
+          fi
+          
+          # Check include_files logic
+          if [ -n "$TARGET_BRANCHES" ] && [ -z "$INCLUDE_FILES" ] && [ "$CHECK_ONLY" = "false" ]; then
+            echo "❌ Error: include_files is required when target_branches is specified in sync mode."
+            echo "## ❌ Workflow Error" >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Error:** include_files is required when target_branches is specified in sync mode." >> $GITHUB_STEP_SUMMARY
+            echo "" >> $GITHUB_STEP_SUMMARY
+            echo "**Solution:** Please either:" >> $GITHUB_STEP_SUMMARY
+            echo "- Specify files to sync in include_files (e.g., 'actions,workflows/perform_tests.yml')" >> $GITHUB_STEP_SUMMARY
+            echo "- Use 'ALL' in include_files to sync all .github files" >> $GITHUB_STEP_SUMMARY
+            echo "- Use 'ALL' in target_branches to sync all branches" >> $GITHUB_STEP_SUMMARY
+            echo "- Enable check_only mode to check differences without syncing" >> $GITHUB_STEP_SUMMARY
+            exit 1
           fi
           
           # Convert comma-separated string to array
@@ -226,18 +241,23 @@ jobs:
                     # Copy .github folder from main (excluding sync-github-folder.yml)
                     echo "📋 Copying .github folder from main (excluding sync-github-folder.yml)"
                     if [ -n "$INCLUDE_FILES" ]; then
-                      echo "📋 Copying specific files: $INCLUDE_FILES"
-                      # Convert comma-separated string to array and copy each file/folder
-                      IFS=',' read -ra FILES_ARRAY <<< "$INCLUDE_FILES"
-                      for file_item in "${FILES_ARRAY[@]}"; do
-                        file_item=$(echo "$file_item" | xargs)  # Trim whitespace
-                        if [ -n "$file_item" ]; then
-                          # Remove .github/ prefix if present to normalize the path
-                          NORMALIZED_PATH=$(echo "$file_item" | sed 's|^\.github/||')
-                          echo "📄 Copying: .github/$NORMALIZED_PATH"
-                          git checkout origin/main -- ".github/$NORMALIZED_PATH"
-                        fi
-                      done
+                      if [ "$INCLUDE_FILES" = "ALL" ]; then
+                        echo "📋 Copying all .github files (ALL mode)"
+                        git checkout origin/main -- .github/
+                      else
+                        echo "📋 Copying specific files: $INCLUDE_FILES"
+                        # Convert comma-separated string to array and copy each file/folder
+                        IFS=',' read -ra FILES_ARRAY <<< "$INCLUDE_FILES"
+                        for file_item in "${FILES_ARRAY[@]}"; do
+                          file_item=$(echo "$file_item" | xargs)  # Trim whitespace
+                          if [ -n "$file_item" ]; then
+                            # Remove .github/ prefix if present to normalize the path
+                            NORMALIZED_PATH=$(echo "$file_item" | sed 's|^\.github/||')
+                            echo "📄 Copying: .github/$NORMALIZED_PATH"
+                            git checkout origin/main -- ".github/$NORMALIZED_PATH"
+                          fi
+                        done
+                      fi
                     else
                       # Copy entire .github folder
                       git checkout origin/main -- .github/
@@ -322,18 +342,23 @@ jobs:
                   # Copy .github folder from main (excluding sync-github-folder.yml)
                   echo "📋 Copying .github folder from main (excluding sync-github-folder.yml)"
                   if [ -n "$INCLUDE_FILES" ]; then
-                    echo "📋 Copying specific files: $INCLUDE_FILES"
-                    # Convert comma-separated string to array and copy each file/folder
-                    IFS=',' read -ra FILES_ARRAY <<< "$INCLUDE_FILES"
-                    for file_item in "${FILES_ARRAY[@]}"; do
-                      file_item=$(echo "$file_item" | xargs)  # Trim whitespace
-                      if [ -n "$file_item" ]; then
-                        # Remove .github/ prefix if present to normalize the path
-                        NORMALIZED_PATH=$(echo "$file_item" | sed 's|^\.github/||')
-                        echo "📄 Copying: .github/$NORMALIZED_PATH"
-                        git checkout origin/main -- ".github/$NORMALIZED_PATH"
-                      fi
-                    done
+                    if [ "$INCLUDE_FILES" = "ALL" ]; then
+                      echo "📋 Copying all .github files (ALL mode)"
+                      git checkout origin/main -- .github/
+                    else
+                      echo "📋 Copying specific files: $INCLUDE_FILES"
+                      # Convert comma-separated string to array and copy each file/folder
+                      IFS=',' read -ra FILES_ARRAY <<< "$INCLUDE_FILES"
+                      for file_item in "${FILES_ARRAY[@]}"; do
+                        file_item=$(echo "$file_item" | xargs)  # Trim whitespace
+                        if [ -n "$file_item" ]; then
+                          # Remove .github/ prefix if present to normalize the path
+                          NORMALIZED_PATH=$(echo "$file_item" | sed 's|^\.github/||')
+                          echo "📄 Copying: .github/$NORMALIZED_PATH"
+                          git checkout origin/main -- ".github/$NORMALIZED_PATH"
+                        fi
+                      done
+                    fi
                   else
                     # Copy entire .github folder
                     git checkout origin/main -- .github/

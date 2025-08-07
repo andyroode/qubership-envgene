@@ -26,7 +26,7 @@ The workflow accepts the following input parameters:
 | `target_branches` | string | No | '' | Comma-separated list of target branches or "ALL" for all branches |
 | `exclude_branch` | string | No | '' | Comma-separated list of branches to exclude from sync |
 | `check_only` | choice | No | 'false' | Check mode - show differences without syncing (true/false) |
-| `include_files` | string | No | '' | Specific files/folders to sync (comma-separated, e.g., "actions,workflows/perform_tests.yml" or ".github/actions,workflows/perform_tests.yml") or empty for all .github files |
+| `include_files` | string | No | '' | Specific files/folders to sync (comma-separated, e.g., "actions,workflows/perform_tests.yml"), "ALL" for all .github files, or empty (only when target_branches is empty or "ALL") |
 
 ### Modes of Operation
 
@@ -66,8 +66,15 @@ When `include_files` parameter is provided (only in Sync Mode):
 - **Flexible Paths**: Can specify paths with or without `.github/` prefix:
   - `actions/build-effective-set-python/action.yml` (recommended)
   - `.github/actions/build-effective-set-python/action.yml` (also supported)
+- **ALL Mode**: Use `"ALL"` to sync all `.github` files (equivalent to empty `include_files` when `target_branches` is empty or "ALL")
 - **Multiple Items**: Can specify multiple files/folders separated by commas
 - **Recursive Copy**: When specifying a folder, all files and subfolders within it are copied
+
+#### include_files Logic Rules
+- **When `target_branches` is specified**: `include_files` is **required** in sync mode
+- **When `target_branches` is empty or "ALL"**: `include_files` can be empty (syncs all files)
+- **"ALL" in include_files**: Syncs all `.github` files regardless of `target_branches` value
+- **Check Mode**: `include_files` is ignored (always analyzes all files)
 
 #### Check Mode vs Sync Mode Behavior
 
@@ -155,6 +162,20 @@ target_branches: "feature/bugfix, develop"
 # Both formats work - with or without .github/ prefix
 include_files: "actions/build-effective-set-python/action.yml,.github/workflows/perform_tests.yml"
 target_branches: "feature/new-ui, develop"
+```
+
+### Sync All Files to Specific Branches
+```yaml
+# Sync all .github files to specific branches
+include_files: "ALL"
+target_branches: "feature/new-ui, develop"
+```
+
+### Sync Specific Files to All Branches
+```yaml
+# Sync specific files to all branches
+include_files: "actions,workflows/perform_tests.yml"
+target_branches: "ALL"
 ```
 
 ### Check Mode with Specific Branches
@@ -253,6 +274,14 @@ The workflow creates a comprehensive summary in the GitHub Actions interface:
 
 #### "No changes to sync"
 - **Solution**: This is informational - the branch is already up to date
+
+#### "include_files is required when target_branches is specified in sync mode"
+- **Cause**: You specified target branches but didn't specify which files to sync
+- **Solution**: Either:
+  - Specify files in `include_files` (e.g., "actions,workflows/perform_tests.yml")
+  - Use "ALL" in `include_files` to sync all files
+  - Use "ALL" in `target_branches` to sync all branches
+  - Enable `check_only` mode to check differences without syncing
 
 ## Security Considerations
 

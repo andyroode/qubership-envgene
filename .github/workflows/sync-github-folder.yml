@@ -5,14 +5,6 @@ run-name: "Dev: Sync .github folder across branches"
 on:
   workflow_dispatch:
     inputs:
-      target_branches:
-        description: 'Target branches to sync (comma-separated) or "ALL" for all branches'
-        required: false
-        default: ''
-      exclude_branch:
-        description: 'Branches to exclude from sync (comma-separated)'
-        required: false
-        default: ''
       check_only:
         description: 'Check mode - show differences without syncing'
         required: false
@@ -21,6 +13,18 @@ on:
           - 'false'
           - 'true'
         default: 'false'
+      target_branches:
+        description: 'Target branches to sync (comma-separated) or "ALL" for all branches'
+        required: false
+        default: ''
+      exclude_branch:
+        description: 'Branches to exclude from sync (comma-separated)'
+        required: false
+        default: ''
+      include_files:
+        description: 'Specific files/folders to sync (comma-separated, e.g., "actions,workflows/perform_tests.yml") or empty for all .github files'
+        required: false
+        default: ''
 
 jobs:
   sync-github-folder:
@@ -70,6 +74,7 @@ jobs:
           TARGET_BRANCHES="${{ steps.parse-targets.outputs.target_branches }}"
           EXCLUDE_BRANCHES="${{ steps.parse-targets.outputs.exclude_branches }}"
           CHECK_ONLY="${{ github.event.inputs.check_only }}"
+          INCLUDE_FILES="${{ github.event.inputs.include_files }}"
           
           # Check if target_branches is provided (only fail if not in check_only mode)
           if [ -z "$TARGET_BRANCHES" ]; then
@@ -220,7 +225,21 @@ jobs:
                     
                     # Copy .github folder from main (excluding sync-github-folder.yml)
                     echo "📋 Copying .github folder from main (excluding sync-github-folder.yml)"
-                    git checkout origin/main -- .github/
+                    if [ -n "$INCLUDE_FILES" ]; then
+                      echo "📋 Copying specific files: $INCLUDE_FILES"
+                      # Convert comma-separated string to array and copy each file/folder
+                      IFS=',' read -ra FILES_ARRAY <<< "$INCLUDE_FILES"
+                      for file_item in "${FILES_ARRAY[@]}"; do
+                        file_item=$(echo "$file_item" | xargs)  # Trim whitespace
+                        if [ -n "$file_item" ]; then
+                          echo "📄 Copying: .github/$file_item"
+                          git checkout origin/main -- ".github/$file_item"
+                        fi
+                      done
+                    else
+                      # Copy entire .github folder
+                      git checkout origin/main -- .github/
+                    fi
                     
                     # Remove sync-github-folder.yml if it exists in target branch
                     if [ -f ".github/workflows/sync-github-folder.yml" ]; then
@@ -300,7 +319,21 @@ jobs:
                   
                   # Copy .github folder from main (excluding sync-github-folder.yml)
                   echo "📋 Copying .github folder from main (excluding sync-github-folder.yml)"
-                  git checkout origin/main -- .github/
+                  if [ -n "$INCLUDE_FILES" ]; then
+                    echo "📋 Copying specific files: $INCLUDE_FILES"
+                    # Convert comma-separated string to array and copy each file/folder
+                    IFS=',' read -ra FILES_ARRAY <<< "$INCLUDE_FILES"
+                    for file_item in "${FILES_ARRAY[@]}"; do
+                      file_item=$(echo "$file_item" | xargs)  # Trim whitespace
+                      if [ -n "$file_item" ]; then
+                        echo "📄 Copying: .github/$file_item"
+                        git checkout origin/main -- ".github/$file_item"
+                      fi
+                    done
+                  else
+                    # Copy entire .github folder
+                    git checkout origin/main -- .github/
+                  fi
                   
                   # Remove sync-github-folder.yml if it exists in target branch
                   if [ -f ".github/workflows/sync-github-folder.yml" ]; then
@@ -389,9 +422,9 @@ jobs:
              # Process each branch for summary
              for branch in "${FILTERED_BRANCHES[@]}"; do
                if git ls-remote --heads origin "$branch" | grep -q "$branch"; then
-                 if git ls-tree -r --name-only "origin/$branch" | grep -q "^\.github/"; then
-                   # Get list of .github files in main (excluding sync-github-folder.yml)
-                   MAIN_GITHUB_FILES=$(git ls-tree -r --name-only origin/main | grep "^\.github/" | grep -v "sync-github-folder.yml" | sort)
+                                   if git ls-tree -r --name-only "origin/$branch" | grep -q "^\.github/"; then
+                    # Get list of .github files in main (excluding sync-github-folder.yml)
+                    MAIN_GITHUB_FILES=$(git ls-tree -r --name-only origin/main | grep "^\.github/" | grep -v "sync-github-folder.yml" | sort)
                    
                    # Get list of .github files in target branch
                    TARGET_GITHUB_FILES=$(git ls-tree -r --name-only "origin/$branch" | grep "^\.github/" | sort)

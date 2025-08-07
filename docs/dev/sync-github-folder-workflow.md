@@ -17,6 +17,8 @@ This workflow serves several important purposes:
 
 ### Input Parameters
 
+> **Important Note**: The `include_files` parameter is only used in Sync Mode. In Check Mode, this parameter is ignored and all files are analyzed for differences.
+
 The workflow accepts the following input parameters:
 
 | Parameter | Type | Required | Default | Description |
@@ -24,6 +26,7 @@ The workflow accepts the following input parameters:
 | `target_branches` | string | No | '' | Comma-separated list of target branches or "ALL" for all branches |
 | `exclude_branch` | string | No | '' | Comma-separated list of branches to exclude from sync |
 | `check_only` | choice | No | 'false' | Check mode - show differences without syncing (true/false) |
+| `include_files` | string | No | '' | Specific files/folders to sync (comma-separated, e.g., "actions,workflows/perform_tests.yml") or empty for all .github files |
 
 ### Modes of Operation
 
@@ -50,11 +53,32 @@ The workflow accepts the following input parameters:
 1. **Timestamp Comparison**: Compares the last modification time of `.github` files between main and target branches
 2. **Conditional Sync**: Only syncs if main branch has newer `.github` files
 3. **File Operations**:
-   - Copies `.github` folder from main branch
+   - Copies `.github` folder from main branch (or specific files if `include_files` is specified in sync mode)
    - Excludes `sync-github-folder.yml` from target branches (keeps it only in main)
    - Removes workflow files that don't exist in main
    - Creates a temporary branch for changes
    - Commits and pushes changes
+
+#### Selective File Sync
+When `include_files` parameter is provided (only in Sync Mode):
+- **Specific Files**: Syncs only the specified files and folders
+- **Path Support**: Supports both individual files (e.g., `workflows/perform_tests.yml`) and folders (e.g., `actions`)
+- **Multiple Items**: Can specify multiple files/folders separated by commas
+- **Recursive Copy**: When specifying a folder, all files and subfolders within it are copied
+
+#### Check Mode vs Sync Mode Behavior
+
+**Check Mode:**
+- **Ignores `include_files` parameter** - always analyzes all files in `.github` folder
+- **Shows complete picture** of differences between branches
+- **No file filtering** - reports all missing, extra, and different files
+- **Purpose**: To understand the full scope of differences before syncing
+
+**Sync Mode:**
+- **Respects `include_files` parameter** - only syncs specified files/folders
+- **Selective synchronization** based on `include_files` value
+- **File filtering** - only processes files specified in `include_files`
+- **Purpose**: To apply specific changes to target branches
 
 #### For Missing .github Folders
 1. **Creation**: Creates the `.github` folder in target branches
@@ -89,11 +113,45 @@ target_branches: "ALL"
 exclude_branch: "experimental, deprecated-feature"
 ```
 
-### Check Mode
+### Check Mode (Recommended First Step)
 ```yaml
-# Preview changes without applying them
+# Preview all differences without applying changes
 check_only: "true"
 target_branches: "ALL"
+```
+
+### Sync All Files
+```yaml
+# Sync entire .github folder (default behavior)
+target_branches: "feature/new-ui, develop"
+```
+
+### Sync Specific Files
+```yaml
+# Sync only specific files/folders
+include_files: "actions,workflows/perform_tests.yml"
+target_branches: "feature/new-ui, develop"
+```
+
+### Sync Actions Folder Only
+```yaml
+# Sync only the actions folder
+include_files: "actions"
+target_branches: "ALL"
+```
+
+### Sync Multiple Specific Files
+```yaml
+# Sync multiple specific files and folders
+include_files: "actions,workflows/perform_tests.yml,workflows/dev-build-docker-images.yml"
+target_branches: "feature/bugfix, develop"
+```
+
+### Check Mode with Specific Branches
+```yaml
+# Check specific branches for differences
+check_only: "true"
+target_branches: "feature/new-ui, develop"
 ```
 
 ## Output and Reporting
@@ -149,10 +207,11 @@ The workflow creates a comprehensive summary in the GitHub Actions interface:
 - Immediately after creating pull requests (to avoid conflicts)
 
 ### Recommended Workflow
-1. **Check Mode First**: Always run in check mode first to preview changes
-2. **Review Changes**: Examine the summary to understand what will be changed
-3. **Sync Mode**: Run in sync mode to apply changes
-4. **Verify**: Check that the changes were applied correctly
+1. **Check Mode First**: Always run in check mode first to preview all differences
+2. **Review Changes**: Examine the summary to understand the full scope of differences
+3. **Plan Sync Strategy**: Decide whether to sync all files or use `include_files` for selective sync
+4. **Sync Mode**: Run in sync mode to apply changes (with or without `include_files`)
+5. **Verify**: Check that the changes were applied correctly
 
 ## Troubleshooting
 

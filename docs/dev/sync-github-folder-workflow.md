@@ -75,6 +75,9 @@ When `include_files` parameter is provided (only in Sync Mode):
 - **When `target_branches` is empty or "ALL"**: `include_files` can be empty (syncs all files)
 - **"ALL" in include_files**: Syncs all `.github` files regardless of `target_branches` value
 - **Check Mode**: `include_files` is ignored (always analyzes all files)
+- **Flexible Paths**: Can specify paths with or without `.github/` prefix:
+  - `actions/build-effective-set-python/action.yml` (recommended)
+  - `.github/actions/build-effective-set-python/action.yml` (also supported)
 
 #### Check Mode vs Sync Mode Behavior
 

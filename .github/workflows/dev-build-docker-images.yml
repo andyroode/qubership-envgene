@@ -50,20 +50,19 @@ permissions:
   id-token: write
 
 jobs:
-  conventional-commits:
-    uses: ./.github/workflows/pr-conventional-commits.yaml
-
   tests:
-    needs: [conventional-commits]
     if: |
-      (github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (contains(github.event.head_commit.message, 'feat:') || contains(github.event.head_commit.message, 'fix:') || contains(github.event.head_commit.message, 'BREAKING CHANGE')))) &&
-      (needs.conventional-commits.result == 'success' || needs.conventional-commits.result == 'skipped')
+      github.event_name == 'workflow_dispatch' || (github.event_name == 'push' && (contains(github.event.head_commit.message, 'feat:') || contains(github.event.head_commit.message, 'fix:') || contains(github.event.head_commit.message, 'BREAKING CHANGE')))
     runs-on: ubuntu-latest
     container:
       image: python:3.10-slim-bookworm
     steps:
       - name: Checkout repository
         uses: actions/checkout@v4
+
+      - name: Check Conventional Commits
+        if: github.event_name == 'pull_request'
+        uses: webiny/action-conventional-commits@v1.3.0
       
       - name: Run Tests
         uses: ./.github/actions/run-tests

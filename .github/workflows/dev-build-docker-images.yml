@@ -25,6 +25,11 @@ on:
         required: false
         default: true
         type: boolean
+      build-effective-set-python:
+        description: 'Build Effective Set Generator Python image'
+        required: false
+        default: true
+        type: boolean
   push:
     branches:
       - '**'
@@ -150,4 +155,24 @@ jobs:
           registry: ${{ env.REGISTRY }}
           git-user: ${{ secrets.GIT_USER }}
           git-token: ${{ secrets.GIT_TOKEN }}
-          github-token: ${{ secrets.GITHUB_TOKEN }} 
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+
+  build-effective-set-generator-python:
+    needs: [tests]
+    if: (github.event_name == 'workflow_dispatch' && github.event.inputs.build-effective-set-python == 'true') || (github.event_name == 'push' && (contains(github.event.head_commit.message, 'feat:') || contains(github.event.head_commit.message, 'fix:') || contains(github.event.head_commit.message, 'BREAKING CHANGE')))
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+      attestations: write
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Build Effective Set Generator Python Docker Image
+        uses: ./.github/actions/build-effective-set-python
+        with:
+          registry: ${{ env.REGISTRY }}
+          gh-access-token: ${{ secrets.GH_ACCESS_TOKEN }}
+          github-token: ${{ secrets.GITHUB_TOKEN }}

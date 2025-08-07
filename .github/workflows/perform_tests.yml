@@ -16,6 +16,9 @@ env:
   CI_PROJECT_DIR: ${{ github.workspace }}
 
 jobs:
+  conventional-commits:
+    uses: ./.github/workflows/pr-conventional-commits.yaml
+
   pytest:
     runs-on: ubuntu-latest
     if: |

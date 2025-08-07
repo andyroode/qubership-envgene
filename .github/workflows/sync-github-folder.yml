@@ -232,8 +232,10 @@ jobs:
                       for file_item in "${FILES_ARRAY[@]}"; do
                         file_item=$(echo "$file_item" | xargs)  # Trim whitespace
                         if [ -n "$file_item" ]; then
-                          echo "📄 Copying: .github/$file_item"
-                          git checkout origin/main -- ".github/$file_item"
+                          # Remove .github/ prefix if present to normalize the path
+                          NORMALIZED_PATH=$(echo "$file_item" | sed 's|^\.github/||')
+                          echo "📄 Copying: .github/$NORMALIZED_PATH"
+                          git checkout origin/main -- ".github/$NORMALIZED_PATH"
                         fi
                       done
                     else
@@ -326,8 +328,10 @@ jobs:
                     for file_item in "${FILES_ARRAY[@]}"; do
                       file_item=$(echo "$file_item" | xargs)  # Trim whitespace
                       if [ -n "$file_item" ]; then
-                        echo "📄 Copying: .github/$file_item"
-                        git checkout origin/main -- ".github/$file_item"
+                        # Remove .github/ prefix if present to normalize the path
+                        NORMALIZED_PATH=$(echo "$file_item" | sed 's|^\.github/||')
+                        echo "📄 Copying: .github/$NORMALIZED_PATH"
+                        git checkout origin/main -- ".github/$NORMALIZED_PATH"
                       fi
                     done
                   else

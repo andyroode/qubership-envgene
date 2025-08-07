@@ -26,7 +26,7 @@ The workflow accepts the following input parameters:
 | `target_branches` | string | No | '' | Comma-separated list of target branches or "ALL" for all branches |
 | `exclude_branch` | string | No | '' | Comma-separated list of branches to exclude from sync |
 | `check_only` | choice | No | 'false' | Check mode - show differences without syncing (true/false) |
-| `include_files` | string | No | '' | Specific files/folders to sync (comma-separated, e.g., "actions,workflows/perform_tests.yml") or empty for all .github files |
+| `include_files` | string | No | '' | Specific files/folders to sync (comma-separated, e.g., "actions,workflows/perform_tests.yml" or ".github/actions,workflows/perform_tests.yml") or empty for all .github files |
 
 ### Modes of Operation
 
@@ -63,6 +63,9 @@ The workflow accepts the following input parameters:
 When `include_files` parameter is provided (only in Sync Mode):
 - **Specific Files**: Syncs only the specified files and folders
 - **Path Support**: Supports both individual files (e.g., `workflows/perform_tests.yml`) and folders (e.g., `actions`)
+- **Flexible Paths**: Can specify paths with or without `.github/` prefix:
+  - `actions/build-effective-set-python/action.yml` (recommended)
+  - `.github/actions/build-effective-set-python/action.yml` (also supported)
 - **Multiple Items**: Can specify multiple files/folders separated by commas
 - **Recursive Copy**: When specifying a folder, all files and subfolders within it are copied
 
@@ -145,6 +148,13 @@ target_branches: "ALL"
 # Sync multiple specific files and folders
 include_files: "actions,workflows/perform_tests.yml,workflows/dev-build-docker-images.yml"
 target_branches: "feature/bugfix, develop"
+```
+
+### Sync with Flexible Paths
+```yaml
+# Both formats work - with or without .github/ prefix
+include_files: "actions/build-effective-set-python/action.yml,.github/workflows/perform_tests.yml"
+target_branches: "feature/new-ui, develop"
 ```
 
 ### Check Mode with Specific Branches

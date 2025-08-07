@@ -1,3 +1,4 @@
+# This action is hidden from the GitHub Actions UI
 name: 'Build Qubership Envgene Docker Image'
 description: 'Build and push Qubership Envgene docker image to container registry'
 

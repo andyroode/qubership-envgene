@@ -5,6 +5,7 @@ from os import getenv, environ
 from envgenehelper import logger, copy_path, SD_FILE_NAME, get_sd_dir_by_env_cluster_name
 from envgenehelper.effective_set_helper import GenerationMode
 from gcip import WhenStatement, Need
+from typing_extensions import deprecated
 
 from pipeline_helper import job_instance
 
@@ -91,12 +92,16 @@ def validate_topology_context_mode(effective_set_config_dict, params, cluster_na
                     "deployment, runtime, and cleanup are skipped, SBOMs are not requested")
 
 
+@deprecated("External Job is deprecated")
 def init_local_app_defs_from_artifact(full_env_name, app_reg_defs_job, params):
-    work_dir = os.path.join(getenv('CI_PROJECT_DIR'), "environments", full_env_name)
+    base_dir = getenv('CI_PROJECT_DIR')
+    env_dir = os.path.join(base_dir, "environments", full_env_name)
     artifact_app_defs_path = params.get("APP_DEFS_PATH")
     artifact_reg_defs_path = params.get("REG_DEFS_PATH")
     is_local_app_def = artifact_app_defs_path and artifact_reg_defs_path and app_reg_defs_job
     if is_local_app_def:
-        copy_path(artifact_app_defs_path, os.path.join(work_dir, "AppDefs"))
-        copy_path(artifact_reg_defs_path, os.path.join(work_dir, "RegDefs"))
+        copy_path(artifact_app_defs_path, os.path.join(env_dir, "AppDefs"))
+        copy_path(artifact_reg_defs_path, os.path.join(env_dir, "RegDefs"))
+        copy_path(artifact_app_defs_path, os.path.join(base_dir, "appdefs"))
+        copy_path(artifact_reg_defs_path, os.path.join(base_dir, "regdefs"))
     return is_local_app_def

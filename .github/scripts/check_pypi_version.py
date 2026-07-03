@@ -18,10 +18,15 @@ STRICT_SEMVER_RE = re.compile(
 
 EXIT_VALIDATION_ERROR = 1
 EXIT_PYPI_QUERY_ERROR = 2
+EXIT_PYPI_VERSION_PENDING = 3
 
 
 class PyPIQueryError(RuntimeError):
     """Raised when PyPI cannot be queried due to network or API errors."""
+
+
+class PyPIVersionNotFoundError(RuntimeError):
+    """Raised when PyPI was queried but the expected release is not indexed yet."""
 
 
 def validate_strict_semver(version: str) -> Version:
@@ -111,7 +116,7 @@ def verify_published_version(package_name: str, expected_raw: str) -> None:
     release_files = releases.get(str(expected), [])
 
     if not release_files:
-        raise ValueError(
+        raise PyPIVersionNotFoundError(
             f"Version '{expected}' was not found on PyPI for package '{package_name}'."
         )
 
@@ -157,6 +162,9 @@ def main() -> int:
     except PyPIQueryError as exc:
         print(f"PYPI QUERY ERROR: {exc}", file=sys.stderr)
         return EXIT_PYPI_QUERY_ERROR
+    except PyPIVersionNotFoundError as exc:
+        print(f"PYPI VERSION PENDING: {exc}", file=sys.stderr)
+        return EXIT_PYPI_VERSION_PENDING
 
     return 0
 

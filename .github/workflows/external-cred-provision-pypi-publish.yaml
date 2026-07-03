@@ -9,11 +9,6 @@ on:
         description: "Release version in strict semver format: 0.0.0"
         required: true
         type: string
-      debug_sync_version:
-        description: "TEMPORARY: commit pyproject.toml version bump after build without publishing"
-        required: false
-        type: boolean
-        default: false
 
 concurrency:
   group: pypi-external-cred-provision
@@ -61,10 +56,6 @@ jobs:
             echo "Publish and repository version sync are skipped."
             echo "Repository: ${{ github.repository }}"
             echo "Ref: ${{ github.ref }}"
-          fi
-
-          if [[ "${{ inputs.debug_sync_version }}" == "true" ]]; then
-            echo "DEBUG: version sync after build is enabled (temporary test mode)."
           fi
 
   validate-input:
@@ -462,51 +453,3 @@ jobs:
           git commit -m "chore: bump ${PACKAGE_NAME} version to ${VERSION}"
           git push
           echo "OK: repository version synced to ${VERSION}."
-
-  sync-repo-version-debug:
-    name: "[debug] Sync repository version"
-    needs:
-      - gate
-      - build-package
-    if: inputs.debug_sync_version && needs.gate.outputs.can_publish != 'true'
-    runs-on: ubuntu-latest
-    permissions:
-      contents: write
-
-    steps:
-      - name: Checkout repository
-        uses: actions/checkout@fd07e4be49718ebc76b92bcc6adacaf561707e65 # v6.0.3
-
-      - name: Set release version in pyproject.toml
-        env:
-          VERSION: ${{ inputs.version }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          python ".github/scripts/set_pyproject_version.py" \
-            --pyproject "${PROJECT_DIR}/pyproject.toml" \
-            --package-name "${PACKAGE_NAME}" \
-            --version "${VERSION}"
-
-      - name: Commit version bump (debug)
-        env:
-          VERSION: ${{ inputs.version }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          echo "DEBUG: committing version bump to ${GITHUB_REF} without publishing."
-
-          git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add "${PROJECT_DIR}/pyproject.toml"
-
-          if git diff --staged --quiet; then
-            echo "OK: repository version already matches release ${VERSION}."
-            exit 0
-          fi
-
-          git commit -m "chore: [debug] bump ${PACKAGE_NAME} version to ${VERSION}"
-          git push
-          echo "OK: debug repository version sync completed for ${VERSION}."

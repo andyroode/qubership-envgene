@@ -1,0 +1,51 @@
+name: "Publish to PyPI: external-cred-provision"
+
+run-name: "Publish to PyPI: external-cred-provision v${{ inputs.version }}"
+
+on:
+  workflow_dispatch:
+    inputs:
+      version:
+        description: "Release version in strict semver format: 0.0.0"
+        required: true
+        type: string
+
+permissions:
+  contents: read
+
+env:
+  PACKAGE_NAME: external-cred-provision
+  CLI_NAME: external-cred-provision
+
+jobs:
+  validate-input:
+    name: Validate release input
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Ensure workflow is running from main
+        if: ${{ github.ref_name != 'main' }}
+        run: |
+          echo "ERROR: Publishing is allowed only from main branch."
+          echo "Current branch/ref: $GITHUB_REF_NAME"
+          exit 1
+
+      - name: Validate semver input
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          echo "Package: ${PACKAGE_NAME}"
+          echo "CLI: ${CLI_NAME}"
+          echo "Validating version: ${VERSION}"
+
+          if [[ ! "${VERSION}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
+            echo "ERROR: Version must be strict semver: X.Y.Z"
+            echo "Examples: 0.1.0, 1.0.0, 2.3.4"
+            echo "Not allowed: v1.0.0, 1.0, 1.0.0-rc1, 1.0.0+build, 01.0.0"
+            exit 1
+          fi
+
+          echo "OK: version '${VERSION}' is valid."

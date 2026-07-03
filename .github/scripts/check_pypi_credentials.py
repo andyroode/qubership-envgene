@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import base64
 import json
 import os
 import sys
@@ -60,35 +61,43 @@ def probe_pypi_json_api(package_name: str) -> None:
     print(f"OK: PyPI JSON API is reachable for package '{package_name}'.")
 
 
-def probe_upload_endpoint() -> None:
+def probe_upload_endpoint(username: str, password: str) -> None:
     print(f"Checking PyPI upload endpoint reachability: {PYPI_UPLOAD_URL}")
 
-    request = urllib.request.Request(PYPI_UPLOAD_URL, method="GET")
+    credentials = base64.b64encode(f"{username}:{password}".encode()).decode("ascii")
+    request = urllib.request.Request(
+        PYPI_UPLOAD_URL,
+        method="GET",
+        headers={"Authorization": f"Basic {credentials}"},
+    )
 
     try:
-        with urllib.request.urlopen(request, timeout=20) as response:
-            if response.status >= 400:
-                raise PyPIQueryError(
-                    f"PyPI upload endpoint returned unexpected status: HTTP {response.status}"
-                )
+        with urllib.request.urlopen(request, timeout=20):
+            print("OK: PyPI upload endpoint is reachable.")
     except urllib.error.HTTPError as exc:
-        if exc.code < 500:
+        if exc.code in {401, 403}:
+            raise ValueError(
+                f"PyPI upload credentials were rejected (HTTP {exc.code})."
+            ) from exc
+        if exc.code == 405:
             print("OK: PyPI upload endpoint is reachable.")
             return
+        if exc.code < 500:
+            raise PyPIQueryError(
+                f"PyPI upload endpoint returned unexpected client error: HTTP {exc.code}"
+            ) from exc
         raise PyPIQueryError(f"Failed to reach PyPI upload endpoint: HTTP {exc.code}") from exc
     except urllib.error.URLError as exc:
         raise PyPIQueryError(f"Failed to reach PyPI upload endpoint: {exc.reason}") from exc
-
-    print("OK: PyPI upload endpoint is reachable.")
 
 
 def check_pypi_credentials(package_name: str, username: str, password: str) -> None:
     validate_credential_shape(username, password)
     probe_pypi_json_api(package_name=package_name)
-    probe_upload_endpoint()
+    probe_upload_endpoint(username=username, password=password)
     print(
-        "NOTE: PyPI API tokens can be validated only during upload. "
-        "Credential shape checks passed; upload will confirm authorization."
+        "NOTE: Full upload authorization is confirmed during twine upload. "
+        "Credential configuration and endpoint reachability checks passed."
     )
 
 

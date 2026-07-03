@@ -12,6 +12,11 @@ import tomllib
 STRICT_SEMVER_RE = re.compile(
     r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$"
 )
+PROJECT_SECTION_RE = re.compile(r"^\[project\]\s*(?:#.*)?$")
+SECTION_HEADER_RE = re.compile(r"^\[.*\]\s*(?:#.*)?$")
+VERSION_LINE_RE = re.compile(
+    r'^(version\s*=\s*)(?:"[^"]*"|\'[^\']*\')(\s*(?:#.*)?)$'
+)
 
 
 def validate_semver(version: str) -> None:
@@ -55,16 +60,18 @@ def replace_project_version(
     replaced = False
 
     for line in text.splitlines():
-        if re.match(r"^\[project\]\s*$", line):
+        if PROJECT_SECTION_RE.match(line):
             in_project_section = True
             result_lines.append(line)
             continue
 
-        if in_project_section and re.match(r"^\[.*\]\s*$", line):
+        if in_project_section and SECTION_HEADER_RE.match(line):
             in_project_section = False
 
-        if in_project_section and re.match(r'^version\s*=\s*"[^"]+"\s*$', line):
-            result_lines.append(f'version = "{release_version}"')
+        version_match = VERSION_LINE_RE.match(line) if in_project_section else None
+        if version_match:
+            prefix, suffix = version_match.group(1), version_match.group(2)
+            result_lines.append(f'{prefix}"{release_version}"{suffix}')
             replaced = True
         else:
             result_lines.append(line)

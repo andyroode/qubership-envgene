@@ -74,3 +74,90 @@ jobs:
           python ".github/scripts/check_pypi_version.py" \
             --package-name "${PACKAGE_NAME}" \
             --version "${VERSION}"
+
+  build-package:
+    name: Build package dry-run
+    runs-on: ubuntu-latest
+    needs: validate-input
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6
+
+      - name: Set up Python
+        uses: actions/setup-python@v6
+        with:
+          python-version: "3.12"
+
+      - name: Install build tools
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install build twine
+
+      - name: Validate project structure
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          test -d "${PROJECT_DIR}"
+          test -f "${PROJECT_DIR}/pyproject.toml"
+          test -d "${PROJECT_DIR}/src/external_cred_provision"
+
+          echo "OK: project structure is valid."
+
+      - name: Set release version in pyproject.toml
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          python "${PROJECT_DIR}/scripts/set_pyproject_version.py" \
+            --pyproject "${PROJECT_DIR}/pyproject.toml" \
+            --package-name "${PACKAGE_NAME}" \
+            --version "${VERSION}"
+
+      - name: Show updated pyproject version
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cd "${PROJECT_DIR}"
+
+          python - <<'PY'
+          import pathlib
+          import tomllib
+
+          data = tomllib.loads(pathlib.Path("pyproject.toml").read_text(encoding="utf-8"))
+          print(f'{data["project"]["name"]} {data["project"]["version"]}')
+          PY
+
+      - name: Build package
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cd "${PROJECT_DIR}"
+          python -m build
+
+      - name: Check distributions
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cd "${PROJECT_DIR}"
+          python -m twine check dist/*
+
+      - name: List distributions
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cd "${PROJECT_DIR}"
+          ls -lah dist/
+
+      - name: Upload dist artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: external-cred-provision-dist-${{ inputs.version }}
+          path: ${{ env.PROJECT_DIR }}/dist/*

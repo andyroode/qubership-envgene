@@ -9,6 +9,11 @@ on:
         description: "Release version in strict semver format: 0.0.0"
         required: true
         type: string
+      debug_sync_version:
+        description: "TEMPORARY: run sync-repo-version after build without publishing (for testing)"
+        required: false
+        type: boolean
+        default: false
 
 concurrency:
   group: pypi-external-cred-provision
@@ -53,9 +58,15 @@ jobs:
             echo "Publish mode: PyPI upload and repository version sync are enabled."
           else
             echo "Build-only mode: build, test, and artifact upload will run."
-            echo "Publish and repository version sync are skipped."
+            echo "Publish is skipped."
             echo "Repository: ${{ github.repository }}"
             echo "Ref: ${{ github.ref }}"
+          fi
+
+          if [[ "${{ inputs.debug_sync_version }}" == "true" ]]; then
+            echo "DEBUG: sync-repo-version will run after build (temporary test mode)."
+          elif [[ "${can_publish}" != "true" ]]; then
+            echo "Repository version sync is skipped."
           fi
 
   validate-input:
@@ -412,8 +423,15 @@ jobs:
     name: Sync repository version
     needs:
       - gate
+      - build-package
       - publish-package
-    if: needs.gate.outputs.can_publish == 'true'
+    if: |
+      always() &&
+      needs.build-package.result == 'success' &&
+      (
+        (inputs.debug_sync_version == true && needs.gate.outputs.can_publish != 'true') ||
+        (needs.gate.outputs.can_publish == 'true' && needs.publish-package.result == 'success')
+      )
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -437,9 +455,14 @@ jobs:
       - name: Commit version bump
         env:
           VERSION: ${{ inputs.version }}
+          DEBUG_SYNC: ${{ inputs.debug_sync_version }}
         shell: bash
         run: |
           set -euo pipefail
+
+          if [[ "${DEBUG_SYNC}" == "true" ]]; then
+            echo "DEBUG: running sync-repo-version without publish."
+          fi
 
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
@@ -450,6 +473,11 @@ jobs:
             exit 0
           fi
 
-          git commit -m "chore: bump ${PACKAGE_NAME} version to ${VERSION}"
+          if [[ "${DEBUG_SYNC}" == "true" ]]; then
+            git commit -m "chore: [debug] bump ${PACKAGE_NAME} version to ${VERSION}"
+          else
+            git commit -m "chore: bump ${PACKAGE_NAME} version to ${VERSION}"
+          fi
+
           git push
           echo "OK: repository version synced to ${VERSION}."

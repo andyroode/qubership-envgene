@@ -112,7 +112,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          python "${PROJECT_DIR}/scripts/set_pyproject_version.py" \
+          python ".github/scripts/set_pyproject_version.py" \
             --pyproject "${PROJECT_DIR}/pyproject.toml" \
             --package-name "${PACKAGE_NAME}" \
             --version "${VERSION}"

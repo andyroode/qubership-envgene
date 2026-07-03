@@ -102,20 +102,55 @@ def check_candidate_version(package_name: str, candidate_raw: str) -> None:
     print(f"OK: candidate version '{candidate}' is greater than latest PyPI version '{latest}'.")
 
 
+def verify_published_version(package_name: str, expected_raw: str) -> None:
+    expected = validate_strict_semver(expected_raw)
+
+    print(f"Expected published version: {expected}")
+
+    releases = fetch_pypi_releases(package_name)
+    release_files = releases.get(str(expected), [])
+
+    if not release_files:
+        raise ValueError(
+            f"Version '{expected}' was not found on PyPI for package '{package_name}'."
+        )
+
+    print(f"OK: version '{expected}' is published on PyPI ({len(release_files)} file(s)).")
+
+
 def main() -> int:
     parser = argparse.ArgumentParser(
-        description="Validate release version and ensure it is greater than the latest PyPI release."
+        description="Validate or verify PyPI release versions."
     )
     parser.add_argument("--package-name", required=True)
     parser.add_argument("--version", required=True)
+    parser.add_argument(
+        "--verify-published",
+        action="store_true",
+        help="Verify that the given version already exists on PyPI.",
+    )
+    parser.add_argument(
+        "--semver-only",
+        action="store_true",
+        help="Validate semver format only, without querying PyPI.",
+    )
 
     args = parser.parse_args()
 
     try:
-        check_candidate_version(
-            package_name=args.package_name,
-            candidate_raw=args.version,
-        )
+        if args.semver_only:
+            validate_strict_semver(args.version)
+            print(f"OK: version '{args.version}' is valid semver.")
+        elif args.verify_published:
+            verify_published_version(
+                package_name=args.package_name,
+                expected_raw=args.version,
+            )
+        else:
+            check_candidate_version(
+                package_name=args.package_name,
+                candidate_raw=args.version,
+            )
     except ValueError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
         return EXIT_VALIDATION_ERROR

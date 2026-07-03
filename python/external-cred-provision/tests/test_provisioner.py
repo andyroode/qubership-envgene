@@ -1,6 +1,8 @@
+from pathlib import Path
 from unittest.mock import patch
 
 import pytest
+import yaml
 
 from external_cred_provision.provisioner import (
     CredentialEntry,
@@ -165,3 +167,32 @@ class TestResolveData:
         assert len(result["a"]) == PasswordGenerator.DEFAULT_LENGTH
         assert len(result["b"]) == PasswordGenerator.DEFAULT_LENGTH
         assert result["a"] != result["b"]
+
+
+FIXTURES_DIR = Path(__file__).parent / "fixtures"
+
+
+class TestSampleContextFixture:
+    @staticmethod
+    def _provider_type_from_vals(vals: str) -> tuple[str, str | None]:
+        if vals.startswith("ref+vault://"):
+            return "vault", None
+        if vals.startswith("ref+gcpsecrets://"):
+            return "gcpsecrets", None
+        if vals.startswith("ref+awssecrets://"):
+            return "awssecrets", None
+        raise AssertionError(f"Unexpected vals in fixture: {vals}")
+
+    def test_sample_context_credentials_parse_without_errors(self):
+        context = yaml.safe_load((FIXTURES_DIR / "sample-context.yaml").read_text(encoding="utf-8"))
+        credentials = context["credentials"]
+
+        with patch(
+            "external_cred_provision.provisioner.MultiStoreProvider.parse_provider_type",
+            side_effect=self._provider_type_from_vals,
+        ):
+            for cred_id, entry in credentials.items():
+                cred, errors = ExternalCredProvisioner._parse_credential(cred_id, entry)
+                assert errors == [], f"{cred_id}: {errors}"
+                assert cred is not None
+                assert cred.id == cred_id

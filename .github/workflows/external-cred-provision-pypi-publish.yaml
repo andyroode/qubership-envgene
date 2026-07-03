@@ -10,6 +10,10 @@ on:
         required: true
         type: string
 
+concurrency:
+  group: pypi-external-cred-provision
+  cancel-in-progress: false
+
 permissions:
   contents: read
 
@@ -20,88 +24,88 @@ env:
 
 jobs:
   validate-input:
-    name: Validate release input
+    name: Validate release version
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v6
-
-      - name: Ensure workflow is running from main
-        if: ${{ github.ref_name != 'main' }}
-        run: |
-          echo "ERROR: Publishing is allowed only from main branch."
-          echo "Current branch/ref: $GITHUB_REF_NAME"
-          exit 1
-
-      - name: Validate semver input
-        env:
-          VERSION: ${{ inputs.version }}
-        shell: bash
-        run: |
-          set -euo pipefail
-
-          echo "Package: ${PACKAGE_NAME}"
-          echo "CLI: ${CLI_NAME}"
-          echo "Validating version: ${VERSION}"
-
-          if [[ ! "${VERSION}" =~ ^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$ ]]; then
-            echo "ERROR: Version must be strict semver: X.Y.Z"
-            echo "Examples: 0.1.0, 1.0.0, 2.3.4"
-            echo "Not allowed: v1.0.0, 1.0, 1.0.0-rc1, 1.0.0+build, 01.0.0"
-            exit 1
-          fi
-
-          echo "OK: version '${VERSION}' is valid."
+        uses: actions/checkout@fd07e4be49718ebc76b92bcc6adacaf561707e65 # v6.0.3
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.12"
-  
-      - name: Install version parser
-        run: |
-            python -m pip install --upgrade pip
-            python -m pip install packaging
 
-      - name: Ensure version is greater than latest PyPI release
+      - name: Install PyPI version check dependencies
+        run: |
+          python -m pip install --upgrade pip
+          python -m pip install packaging
+
+      - name: Validate semver and PyPI version bump
         env:
           VERSION: ${{ inputs.version }}
         shell: bash
         run: |
           set -euo pipefail
 
-          python ".github/scripts/check_pypi_version.py" \
-            --package-name "${PACKAGE_NAME}" \
-            --version "${VERSION}"
+          attempt=1
+          max_attempts=3
+
+          while true; do
+            set +e
+            python ".github/scripts/check_pypi_version.py" \
+              --package-name "${PACKAGE_NAME}" \
+              --version "${VERSION}"
+            exit_code=$?
+            set -e
+
+            if [[ "${exit_code}" -eq 0 ]]; then
+              break
+            fi
+
+            if [[ "${exit_code}" -eq 2 && "${attempt}" -lt "${max_attempts}" ]]; then
+              echo "PyPI query failed (attempt ${attempt}/${max_attempts}), retrying in 10s..."
+              attempt=$((attempt + 1))
+              sleep 10
+              continue
+            fi
+
+            exit "${exit_code}"
+          done
 
   build-package:
-    name: Build package dry-run
+    name: Build and verify package
+    if: github.ref == 'refs/heads/main'
     runs-on: ubuntu-latest
     needs: validate-input
 
     steps:
-      - name: Checkout
-        uses: actions/checkout@v6
+      - name: Checkout repository
+        uses: actions/checkout@fd07e4be49718ebc76b92bcc6adacaf561707e65 # v6.0.3
 
       - name: Set up Python
-        uses: actions/setup-python@v6
+        uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
         with:
           python-version: "3.12"
 
-      - name: Install build tools
+      - name: Install build, test, and check dependencies
         run: |
           python -m pip install --upgrade pip
-          python -m pip install build twine
+          python -m pip install build twine pytest
 
-      - name: Validate project structure
+      - name: Validate project layout
         shell: bash
         run: |
           set -euo pipefail
 
           test -d "${PROJECT_DIR}"
           test -f "${PROJECT_DIR}/pyproject.toml"
+          test -f "${PROJECT_DIR}/README.md"
           test -d "${PROJECT_DIR}/src/external_cred_provision"
+          test -f "${PROJECT_DIR}/tests/fixtures/smoke-empty-context.yaml"
+          test -f "${PROJECT_DIR}/tests/fixtures/sample-context.yaml"
+          grep -q "^${CLI_NAME} =" "${PROJECT_DIR}/pyproject.toml"
 
           echo "OK: project structure is valid."
 
@@ -117,7 +121,7 @@ jobs:
             --package-name "${PACKAGE_NAME}" \
             --version "${VERSION}"
 
-      - name: Show updated pyproject version
+      - name: Print release version
         shell: bash
         run: |
           set -euo pipefail
@@ -132,7 +136,16 @@ jobs:
           print(f'{data["project"]["name"]} {data["project"]["version"]}')
           PY
 
-      - name: Build package
+      - name: Run unit tests
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          cd "${PROJECT_DIR}"
+          python -m pip install -e .
+          python -m pytest
+
+      - name: Build sdist and wheel
         shell: bash
         run: |
           set -euo pipefail
@@ -140,7 +153,7 @@ jobs:
           cd "${PROJECT_DIR}"
           python -m build
 
-      - name: Check distributions
+      - name: Check distribution metadata
         shell: bash
         run: |
           set -euo pipefail
@@ -148,29 +161,38 @@ jobs:
           cd "${PROJECT_DIR}"
           python -m twine check dist/*
 
-      - name: Smoke test installed CLI
+      - name: Smoke test installed wheel and CLI
         shell: bash
         run: |
           set -euo pipefail
 
           cd "${PROJECT_DIR}"
 
+          wheel_count="$(find dist -maxdepth 1 -name '*.whl' | wc -l)"
+          if [[ "${wheel_count}" -ne 1 ]]; then
+            echo "ERROR: expected exactly one wheel in dist/, found ${wheel_count}"
+            find dist -maxdepth 1 -name '*.whl' -print
+            exit 1
+          fi
+
+          WHEEL_FILE="$(find dist -maxdepth 1 -name '*.whl' | head -n 1)"
+
           python -m venv .venv-smoke
           source .venv-smoke/bin/activate
 
           python -m pip install --upgrade pip
-
-          WHEEL_FILE="$(ls dist/*.whl | head -n 1)"
           echo "Installing wheel: ${WHEEL_FILE}"
-
           python -m pip install "${WHEEL_FILE}"
 
-          echo "Checking CLI entrypoint..."
-          external-cred-provision --help
+          command -v "${CLI_NAME}"
+          "${CLI_NAME}" --help
+
+          echo "Running dry-run smoke test..."
+          "${CLI_NAME}" --dry-run tests/fixtures/smoke-empty-context.yaml
 
           echo "OK: CLI entrypoint works."
 
-      - name: List distributions
+      - name: List built distributions
         shell: bash
         run: |
           set -euo pipefail
@@ -178,8 +200,9 @@ jobs:
           cd "${PROJECT_DIR}"
           ls -lah dist/
 
-      - name: Upload dist artifacts
-        uses: actions/upload-artifact@v6
+      - name: Upload release artifacts
+        uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
           name: external-cred-provision-dist-${{ inputs.version }}
           path: ${{ env.PROJECT_DIR }}/dist/*
+          retention-days: 14

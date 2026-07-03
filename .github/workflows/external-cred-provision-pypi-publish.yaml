@@ -157,7 +157,7 @@ jobs:
           ls -lah dist/
 
       - name: Upload dist artifacts
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: external-cred-provision-dist-${{ inputs.version }}
           path: ${{ env.PROJECT_DIR }}/dist/*

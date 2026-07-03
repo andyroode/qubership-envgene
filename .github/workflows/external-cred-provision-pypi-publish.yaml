@@ -148,6 +148,28 @@ jobs:
           cd "${PROJECT_DIR}"
           python -m twine check dist/*
 
+      - name: Smoke test installed CLI
+        shell: bash
+        run: |
+            set -euo pipefail
+
+            cd "${PROJECT_DIR}"
+
+            python -m venv .venv-smoke
+            source .venv-smoke/bin/activate
+
+            python -m pip install --upgrade pip
+
+            WHEEL_FILE="$(ls dist/*.whl | head -n 1)"
+            echo "Installing wheel: ${WHEEL_FILE}"
+
+            python -m pip install "${WHEEL_FILE}"
+
+            echo "Checking CLI entrypoint..."
+            external-cred-provision --help
+
+            echo "OK: CLI entrypoint works."   
+
       - name: List distributions
         shell: bash
         run: |

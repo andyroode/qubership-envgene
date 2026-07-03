@@ -282,6 +282,38 @@ jobs:
           python -m pip install --upgrade pip
           python -m pip install twine packaging
 
+      - name: Verify PyPI connectivity and credentials
+        env:
+          TWINE_USERNAME: ${{ secrets.PYPI_API_USER }}
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        shell: bash
+        run: |
+          set -euo pipefail
+
+          attempt=1
+          max_attempts="${PYPI_RETRY_ATTEMPTS}"
+
+          while true; do
+            set +e
+            python ".github/scripts/check_pypi_credentials.py" \
+              --package-name "${PACKAGE_NAME}"
+            exit_code=$?
+            set -e
+
+            if [[ "${exit_code}" -eq 0 ]]; then
+              break
+            fi
+
+            if [[ "${exit_code}" -eq 2 && "${attempt}" -lt "${max_attempts}" ]]; then
+              echo "PyPI connectivity check failed (attempt ${attempt}/${max_attempts}), retrying in ${PYPI_RETRY_DELAY_SECONDS}s..."
+              attempt=$((attempt + 1))
+              sleep "${PYPI_RETRY_DELAY_SECONDS}"
+              continue
+            fi
+
+            exit "${exit_code}"
+          done
+
       - name: Download release artifacts
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:

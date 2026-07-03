@@ -16,6 +16,13 @@ STRICT_SEMVER_RE = re.compile(
     r"^(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)\.(0|[1-9][0-9]*)$"
 )
 
+EXIT_VALIDATION_ERROR = 1
+EXIT_PYPI_QUERY_ERROR = 2
+
+
+class PyPIQueryError(RuntimeError):
+    """Raised when PyPI cannot be queried due to network or API errors."""
+
 
 def validate_strict_semver(version: str) -> Version:
     if not STRICT_SEMVER_RE.fullmatch(version):
@@ -41,12 +48,16 @@ def fetch_pypi_releases(package_name: str) -> dict:
         if exc.code == 404:
             print(f"OK: package '{package_name}' does not exist on PyPI yet. First release is allowed.")
             return {}
-        raise RuntimeError(f"Failed to query PyPI: HTTP {exc.code}") from exc
+        raise PyPIQueryError(f"Failed to query PyPI: HTTP {exc.code}") from exc
+    except urllib.error.URLError as exc:
+        raise PyPIQueryError(f"Failed to query PyPI: {exc.reason}") from exc
+    except json.JSONDecodeError as exc:
+        raise PyPIQueryError("Failed to query PyPI: invalid JSON response") from exc
 
     releases = payload.get("releases", {})
 
     if not isinstance(releases, dict):
-        raise RuntimeError("Unexpected PyPI response: 'releases' field is missing or invalid.")
+        raise PyPIQueryError("Unexpected PyPI response: 'releases' field is missing or invalid.")
 
     return releases
 
@@ -102,9 +113,12 @@ def main() -> int:
             package_name=args.package_name,
             candidate_raw=args.version,
         )
-    except Exception as exc:
+    except ValueError as exc:
         print(f"ERROR: {exc}", file=sys.stderr)
-        return 1
+        return EXIT_VALIDATION_ERROR
+    except PyPIQueryError as exc:
+        print(f"PYPI QUERY ERROR: {exc}", file=sys.stderr)
+        return EXIT_PYPI_QUERY_ERROR
 
     return 0
 

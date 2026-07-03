@@ -24,6 +24,9 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      - name: Checkout repository
+        uses: actions/checkout@v5
+
       - name: Ensure workflow is running from main
         if: ${{ github.ref_name != 'main' }}
         run: |

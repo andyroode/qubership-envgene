@@ -54,6 +54,9 @@ def fetch_pypi_releases(package_name: str) -> dict:
     except json.JSONDecodeError as exc:
         raise PyPIQueryError("Failed to query PyPI: invalid JSON response") from exc
 
+    if not isinstance(payload, dict):
+        raise PyPIQueryError("Unexpected PyPI response: JSON root must be an object.")
+
     releases = payload.get("releases", {})
 
     if not isinstance(releases, dict):

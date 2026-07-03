@@ -1,7 +1,7 @@
 # external-cred-provision
 
-Command-line tool for [EnvGene](https://github.com/Netcracker/qubership-envgene) that provisions
-external credentials into secret stores from a declarative YAML context file.
+Command-line tool for [EnvGene](/README.md) that provisions external credentials into secret stores
+from a declarative YAML context file.
 
 EnvGene generates the context during Effective Set calculation. This CLI reads that file, connects
 to the configured stores, and creates or verifies secrets according to each entry's strategy. It
@@ -52,10 +52,10 @@ external-cred-provision --log-level INFO path/to/external-credentials.yaml
 
 ## Command-line options
 
-| Flag          | Default | Meaning                                      |
-|---------------|---------|----------------------------------------------|
-| `--dry-run`   | off     | Run checks only; no writes to secret stores  |
-| `--log-level` | DEBUG   | Console and `module.log` verbosity           |
+| Flag            | Default | Meaning                                     |
+|-----------------|---------|---------------------------------------------|
+| `--dry-run`     | off     | Run checks only; no writes to secret stores |
+| `--log-level`   | DEBUG   | Console and `module.log` verbosity          |
 
 Positional argument `<context-path>` is required. It must point to a YAML file that defines a
 top-level `credentials` map.
@@ -73,11 +73,11 @@ Store type is inferred from each credential's VALS reference scheme:
 
 ## Provisioning strategies
 
-| Strategy           | Secret exists | Secret absent        |
-|--------------------|---------------|----------------------|
-| `fail_if_absent`   | skip          | fail                 |
-| `create_if_absent` | skip          | create               |
-| `overwrite`        | overwrite     | create               |
+| Strategy           | Secret exists | Secret absent |
+|--------------------|---------------|---------------|
+| `fail_if_absent`   | skip          | fail          |
+| `create_if_absent` | skip          | create        |
+| `overwrite`        | overwrite     | create        |
 
 Entries with `fail_if_absent` omit `data` because the CLI performs no write. Write strategies
 require a `data` field (map or scalar, depending on the store).
@@ -103,16 +103,13 @@ credentials:
 Authentication and store settings are read from environment variables. Variable names depend on
 store type and optional `secret_store_id` query parameters in each VALS reference.
 
-See the
-[External Credentials provisioning CLI](https://github.com/Netcracker/qubership-envgene/blob/main/docs/features/external-creds-provisioning-cli.md)
+See the [External Credentials provisioning CLI](/docs/features/external-creds-provisioning-cli.md)
 reference for the full variable list, input schema, value-generation rules, and runtime behaviour.
 
 Broader EnvGene external-credentials design (context generation, Effective Set integration):
 
-[External Credentials Management](https://github.com/Netcracker/qubership-envgene/blob/main/docs/features/external-creds.md)
+[External Credentials Management](/docs/features/external-creds.md)
 
 ## License
 
-Apache License 2.0. See the
-[LICENSE](https://github.com/Netcracker/qubership-envgene/blob/main/LICENSE) file in the EnvGene
-repository.
+Apache License 2.0. See the [LICENSE](/LICENSE) file in the EnvGene repository.

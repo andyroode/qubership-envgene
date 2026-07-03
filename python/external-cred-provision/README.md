@@ -9,11 +9,11 @@ external-cred-provision [OPTIONS] <context-path>
 ```
 
 ```bash
-external-cred-provision effective-set/external-credential/external-credentials.yaml
+external-cred-provision path/to/context.yaml
 ```
 
 Dry-run against the same context:
 
 ```bash
-external-cred-provision --dry-run effective-set/external-credential/external-credentials.yaml
+external-cred-provision --dry-run path/to/context.yaml
 ```

@@ -1,3 +1,9 @@
+# Builds, tests, and publishes qubership-external-cred-provision to PyPI (upstream main only).
+# Forks and non-main refs run build-only: validate, test, artifact upload; no PyPI upload.
+# Required repository secrets: PYPI_API_USER, PYPI_API_TOKEN.
+# Operator guide: docs/dev/external-cred-provision-pypi-publish-workflow.md
+# Helper scripts: .github/scripts/pypi/
+
 name: "Publish to PyPI: qubership-external-cred-provision"
 
 run-name: "Publish to PyPI: qubership-external-cred-provision v${{ inputs.version }}"

@@ -1,4 +1,4 @@
-# external-cred-provision
+# qubership-external-cred-provision
 
 Command-line tool for [EnvGene](/README.md) that provisions external credentials into secret stores
 from a declarative YAML context file.
@@ -27,7 +27,7 @@ supports dry-run mode for CI validation without writes.
 ## Installation
 
 ```bash
-pip install external-cred-provision
+pip install qubership-external-cred-provision
 ```
 
 ## Quick start
@@ -35,19 +35,19 @@ pip install external-cred-provision
 Apply provisioning from a context file:
 
 ```bash
-external-cred-provision path/to/external-credentials.yaml
+qubership-external-cred-provision path/to/external-credentials.yaml
 ```
 
 Validate without writing to any store:
 
 ```bash
-external-cred-provision --dry-run path/to/external-credentials.yaml
+qubership-external-cred-provision --dry-run path/to/external-credentials.yaml
 ```
 
 Set console log verbosity (full diagnostic log is always written to `full.log`):
 
 ```bash
-external-cred-provision --log-level INFO path/to/external-credentials.yaml
+qubership-external-cred-provision --log-level INFO path/to/external-credentials.yaml
 ```
 
 ## Command-line options

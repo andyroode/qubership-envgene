@@ -1,6 +1,6 @@
-name: "Publish to PyPI: external-cred-provision"
+name: "Publish to PyPI: qubership-external-cred-provision"
 
-run-name: "Publish to PyPI: external-cred-provision v${{ inputs.version }}"
+run-name: "Publish to PyPI: qubership-external-cred-provision v${{ inputs.version }}"
 
 on:
   workflow_dispatch:
@@ -19,11 +19,11 @@ permissions:
 
 env:
   PROJECT_DIR: python/external-cred-provision
-  PACKAGE_NAME: external-cred-provision
-  CLI_NAME: external-cred-provision
+  PACKAGE_NAME: qubership-external-cred-provision
+  CLI_NAME: qubership-external-cred-provision
   UPSTREAM_REPO: Netcracker/qubership-envgene
   PYPI_RETRY_ATTEMPTS: 3
-  PYPI_RETRY_DELAY_SECONDS: 10
+  PYPI_RETRY_DELAY_SECONDS: 30
 
 jobs:
   gate:

@@ -24,6 +24,7 @@ env:
   UPSTREAM_REPO: Netcracker/qubership-envgene
   PYPI_RETRY_ATTEMPTS: 3
   PYPI_RETRY_DELAY_SECONDS: 30
+  PYPI_SCRIPTS_DIR: .github/scripts/pypi
 
 jobs:
   gate:
@@ -87,7 +88,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          python ".github/scripts/check_pypi_version.py" \
+          python "${PYPI_SCRIPTS_DIR}/check_pypi_version.py" \
             --package-name "${PACKAGE_NAME}" \
             --version "${VERSION}" \
             --semver-only
@@ -99,35 +100,19 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          source "${PYPI_SCRIPTS_DIR}/retry_command.sh"
 
-          attempt=1
-          max_attempts="${PYPI_RETRY_ATTEMPTS}"
-
-          while true; do
-            set +e
-            python ".github/scripts/check_pypi_version.py" \
+          retry_command "${PYPI_RETRY_ATTEMPTS}" "${PYPI_RETRY_DELAY_SECONDS}" "2" \
+            "PyPI query failed" -- \
+            python "${PYPI_SCRIPTS_DIR}/check_pypi_version.py" \
               --package-name "${PACKAGE_NAME}" \
               --version "${VERSION}"
-            exit_code=$?
-            set -e
-
-            if [[ "${exit_code}" -eq 0 ]]; then
-              break
-            fi
-
-            if [[ "${exit_code}" -eq 2 && "${attempt}" -lt "${max_attempts}" ]]; then
-              echo "PyPI query failed (attempt ${attempt}/${max_attempts}), retrying in ${PYPI_RETRY_DELAY_SECONDS}s..."
-              attempt=$((attempt + 1))
-              sleep "${PYPI_RETRY_DELAY_SECONDS}"
-              continue
-            fi
-
-            exit "${exit_code}"
-          done
 
   build-package:
     name: Build and verify package
-    needs: validate-input
+    needs:
+      - gate
+      - validate-input
     runs-on: ubuntu-latest
 
     steps:
@@ -169,7 +154,7 @@ jobs:
         run: |
           set -euo pipefail
 
-          python ".github/scripts/set_pyproject_version.py" \
+          python "${PYPI_SCRIPTS_DIR}/set_pyproject_version.py" \
             --pyproject "${PROJECT_DIR}/pyproject.toml" \
             --package-name "${PACKAGE_NAME}" \
             --version "${VERSION}"
@@ -253,10 +238,32 @@ jobs:
           cd "${PROJECT_DIR}"
           ls -lah dist/
 
+      - name: Write build summary
+        if: always()
+        env:
+          VERSION: ${{ inputs.version }}
+          CAN_PUBLISH: ${{ needs.gate.outputs.can_publish }}
+        shell: bash
+        run: |
+          {
+            echo "## Build: ${PACKAGE_NAME}"
+            echo ""
+            echo "| Field | Value |"
+            echo "|-------|-------|"
+            echo "| Package | \`${PACKAGE_NAME}\` |"
+            echo "| Version | \`${VERSION}\` |"
+            echo "| Artifact | \`${PACKAGE_NAME}-dist-${VERSION}\` |"
+            if [[ "${CAN_PUBLISH}" == "true" ]]; then
+              echo "| Mode | Publish (upstream \`main\`) |"
+            else
+              echo "| Mode | Build-only |"
+            fi
+          } >> "${GITHUB_STEP_SUMMARY}"
+
       - name: Upload release artifacts
         uses: actions/upload-artifact@b7c566a772e6b6bfb58ed0dc250532a479d7789f # v6.0.0
         with:
-          name: external-cred-provision-dist-${{ inputs.version }}
+          name: ${{ env.PACKAGE_NAME }}-dist-${{ inputs.version }}
           path: ${{ env.PROJECT_DIR }}/dist/*
           retention-days: 14
 
@@ -289,35 +296,17 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          source "${PYPI_SCRIPTS_DIR}/retry_command.sh"
 
-          attempt=1
-          max_attempts="${PYPI_RETRY_ATTEMPTS}"
-
-          while true; do
-            set +e
-            python ".github/scripts/check_pypi_credentials.py" \
+          retry_command "${PYPI_RETRY_ATTEMPTS}" "${PYPI_RETRY_DELAY_SECONDS}" "2" \
+            "PyPI connectivity check failed" -- \
+            python "${PYPI_SCRIPTS_DIR}/check_pypi_credentials.py" \
               --package-name "${PACKAGE_NAME}"
-            exit_code=$?
-            set -e
-
-            if [[ "${exit_code}" -eq 0 ]]; then
-              break
-            fi
-
-            if [[ "${exit_code}" -eq 2 && "${attempt}" -lt "${max_attempts}" ]]; then
-              echo "PyPI connectivity check failed (attempt ${attempt}/${max_attempts}), retrying in ${PYPI_RETRY_DELAY_SECONDS}s..."
-              attempt=$((attempt + 1))
-              sleep "${PYPI_RETRY_DELAY_SECONDS}"
-              continue
-            fi
-
-            exit "${exit_code}"
-          done
 
       - name: Download release artifacts
         uses: actions/download-artifact@018cc2cf5baa6db3ef3c5f8a56943fffe632ef53 # v6.0.0
         with:
-          name: external-cred-provision-dist-${{ inputs.version }}
+          name: ${{ env.PACKAGE_NAME }}-dist-${{ inputs.version }}
           path: dist
 
       - name: Validate artifacts to publish
@@ -350,29 +339,11 @@ jobs:
           TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
           set -euo pipefail
+          source "${PYPI_SCRIPTS_DIR}/retry_command.sh"
 
-          attempt=1
-          max_attempts="${PYPI_RETRY_ATTEMPTS}"
-
-          while true; do
-            set +e
+          retry_command "${PYPI_RETRY_ATTEMPTS}" "${PYPI_RETRY_DELAY_SECONDS}" "any" \
+            "PyPI upload failed" -- \
             python -m twine upload --non-interactive dist/*
-            exit_code=$?
-            set -e
-
-            if [[ "${exit_code}" -eq 0 ]]; then
-              break
-            fi
-
-            if [[ "${attempt}" -lt "${max_attempts}" ]]; then
-              echo "PyPI upload failed (attempt ${attempt}/${max_attempts}), retrying in ${PYPI_RETRY_DELAY_SECONDS}s..."
-              attempt=$((attempt + 1))
-              sleep "${PYPI_RETRY_DELAY_SECONDS}"
-              continue
-            fi
-
-            exit "${exit_code}"
-          done
 
       - name: Verify published version on PyPI
         env:
@@ -380,33 +351,31 @@ jobs:
         shell: bash
         run: |
           set -euo pipefail
+          source "${PYPI_SCRIPTS_DIR}/retry_command.sh"
 
-          attempt=1
-          max_attempts="${PYPI_RETRY_ATTEMPTS}"
-
-          while true; do
-            set +e
-            python ".github/scripts/check_pypi_version.py" \
+          retry_command "${PYPI_RETRY_ATTEMPTS}" "${PYPI_RETRY_DELAY_SECONDS}" "2 3" \
+            "PyPI verification pending" -- \
+            python "${PYPI_SCRIPTS_DIR}/check_pypi_version.py" \
               --package-name "${PACKAGE_NAME}" \
               --version "${VERSION}" \
               --verify-published
-            exit_code=$?
-            set -e
 
-            if [[ "${exit_code}" -eq 0 ]]; then
-              break
-            fi
-
-            if [[ "${attempt}" -lt "${max_attempts}" ]] \
-              && { [[ "${exit_code}" -eq 2 ]] || [[ "${exit_code}" -eq 3 ]]; }; then
-              echo "PyPI verification pending (attempt ${attempt}/${max_attempts}, exit ${exit_code}), retrying in ${PYPI_RETRY_DELAY_SECONDS}s..."
-              attempt=$((attempt + 1))
-              sleep "${PYPI_RETRY_DELAY_SECONDS}"
-              continue
-            fi
-
-            exit "${exit_code}"
-          done
+      - name: Write publish summary
+        if: success()
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          {
+            echo "## PyPI release: ${PACKAGE_NAME}"
+            echo ""
+            echo "| Field | Value |"
+            echo "|-------|-------|"
+            echo "| Package | \`${PACKAGE_NAME}\` |"
+            echo "| Version | \`${VERSION}\` |"
+            echo "| CLI | \`${CLI_NAME}\` |"
+            echo "| PyPI | [${PACKAGE_NAME} ${VERSION}](https://pypi.org/project/${PACKAGE_NAME}/${VERSION}/) |"
+          } >> "${GITHUB_STEP_SUMMARY}"
 
   sync-repo-version:
     name: Sync repository version
@@ -429,12 +398,13 @@ jobs:
         run: |
           set -euo pipefail
 
-          python ".github/scripts/set_pyproject_version.py" \
+          python "${PYPI_SCRIPTS_DIR}/set_pyproject_version.py" \
             --pyproject "${PROJECT_DIR}/pyproject.toml" \
             --package-name "${PACKAGE_NAME}" \
             --version "${VERSION}"
 
       - name: Commit version bump
+        id: sync
         env:
           VERSION: ${{ inputs.version }}
         shell: bash
@@ -447,9 +417,36 @@ jobs:
 
           if git diff --staged --quiet; then
             echo "OK: repository version already matches release ${VERSION}."
+            echo "committed=false" >> "${GITHUB_OUTPUT}"
+            echo "commit_sha=" >> "${GITHUB_OUTPUT}"
             exit 0
           fi
 
           git commit -m "chore: bump ${PACKAGE_NAME} version to ${VERSION}"
           git push
+          echo "committed=true" >> "${GITHUB_OUTPUT}"
+          echo "commit_sha=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
           echo "OK: repository version synced to ${VERSION}."
+
+      - name: Write sync summary
+        if: success()
+        env:
+          VERSION: ${{ inputs.version }}
+        shell: bash
+        run: |
+          {
+            echo "## Repository version sync"
+            echo ""
+            echo "| Field | Value |"
+            echo "|-------|-------|"
+            echo "| Package | \`${PACKAGE_NAME}\` |"
+            echo "| Version | \`${VERSION}\` |"
+            if [[ "${{ steps.sync.outputs.committed }}" == "true" ]]; then
+              commit_sha="${{ steps.sync.outputs.commit_sha }}"
+              short_sha="${commit_sha:0:7}"
+              echo "| Sync commit | [\`${short_sha}\`](https://github.com/${{ github.repository }}/commit/${commit_sha}) |"
+            else
+              echo "| Sync commit | skipped (version already matched) |"
+            fi
+            echo "| PyPI | [${PACKAGE_NAME} ${VERSION}](https://pypi.org/project/${PACKAGE_NAME}/${VERSION}/) |"
+          } >> "${GITHUB_STEP_SUMMARY}"

@@ -14,7 +14,8 @@
 
 ## Description
 
-The workflow [Publish to PyPI: qubership-external-cred-provision](/.github/workflows/external-cred-provision-pypi-publish.yaml)
+The workflow
+[Publish to PyPI: qubership-external-cred-provision](/.github/workflows/external-cred-provision-pypi-publish.yaml)
 builds, tests, and optionally publishes the `qubership-external-cred-provision` Python package to the public PyPI
 index. After a successful publish on upstream `main`, it commits the release version back to
 `python/external-cred-provision/pyproject.toml`.

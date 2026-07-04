@@ -413,7 +413,7 @@ jobs:
     needs:
       - gate
       - publish-package
-    if: needs.gate.outputs.can_publish == 'true'
+    if: needs.gate.outputs.can_publish == 'true' && needs.publish-package.result == 'success'
     runs-on: ubuntu-latest
     permissions:
       contents: write

@@ -80,7 +80,7 @@ gate → validate-input → build-package → publish-package → sync-repo-vers
 | Job                 | Runs when                         | Purpose |
 |---------------------|-----------------------------------|---------|
 | `gate`              | Always                            | Sets `can_publish` for upstream `main` only |
-| `validate-input`    | Always                            | Validates semver; checks PyPI bump in publish mode |
+| `validate-input`    | Always                            | Validates SemVer; checks PyPI bump in publish mode |
 | `build-package`     | After validation                  | Tests, builds, smoke-tests CLI, uploads artifact |
 | `publish-package`   | `can_publish == true`             | Uploads to PyPI and verifies the release |
 | `sync-repo-version` | Publish succeeded on upstream     | Commits `pyproject.toml` version bump |
@@ -98,14 +98,14 @@ Concurrency group `pypi-external-cred-provision` prevents overlapping runs. In-p
 In publish mode the workflow uploads to PyPI, verifies the release, and syncs the repository version.
 
 **Build-only mode** applies on forks, feature branches, or non-upstream repositories. The workflow still validates
-semver, runs tests, builds distributions, smoke-tests the CLI, and uploads a GitHub Actions artifact. PyPI upload
+SemVer, runs tests, builds distributions, smoke-tests the CLI, and uploads a GitHub Actions artifact. PyPI upload
 and repository sync are skipped.
 
 ## How to run a release
 
 1. Open **Actions** in GitHub and select **Publish to PyPI: qubership-external-cred-provision**.
 2. Click **Run workflow**.
-3. Enter the release version in strict semver form (`X.Y.Z`, for example `0.0.1`).
+3. Enter the release version in strict SemVer form (`X.Y.Z`, for example `0.0.1`).
 4. Run the workflow from upstream `main` to publish. Run from a fork or branch to validate the build only.
 5. After success, check the job summaries on `build-package`, `publish-package`, and `sync-repo-version`.
 
@@ -123,7 +123,7 @@ Run the CLI as `external-cred-provision` after install.
 
 ## Version rules
 
-- Input must match strict semver: `X.Y.Z` with no `v` prefix and no pre-release suffix.
+- Input must match strict SemVer: `X.Y.Z` with no `v` prefix and no prerelease suffix.
 - In publish mode, the candidate version must be **greater than** the latest version already on PyPI.
 - The first release is allowed when the package does not exist on PyPI yet (PyPI returns `404`).
 - The build job sets `[project].version` in the working tree for the artifact only. The committed version on
@@ -145,7 +145,7 @@ Open the job in the Actions run and expand **Summary** to read them.
 
 | Script | Role |
 |--------|------|
-| [/.github/scripts/pypi/check_pypi_version.py](/.github/scripts/pypi/check_pypi_version.py) | Semver validation, bump check, post-publish verification |
+| [/.github/scripts/pypi/check_pypi_version.py](/.github/scripts/pypi/check_pypi_version.py) | SemVer validation, bump check, post-publish verification |
 | [/.github/scripts/pypi/check_pypi_credentials.py](/.github/scripts/pypi/check_pypi_credentials.py) | PyPI reachability and credential shape preflight |
 | [/.github/scripts/pypi/set_pyproject_version.py](/.github/scripts/pypi/set_pyproject_version.py) | Updates `[project].version` in `pyproject.toml` |
 | [/.github/scripts/pypi/retry_command.sh](/.github/scripts/pypi/retry_command.sh) | Shared retry helper for transient PyPI failures |
@@ -155,7 +155,7 @@ Exit codes from `check_pypi_version.py`:
 | Code | Meaning |
 |------|---------|
 | `0`  | Success |
-| `1`  | Validation error (bad semver or version not bumped) |
+| `1`  | Validation error (bad SemVer or version not bumped) |
 | `2`  | PyPI query error (retried) |
 | `3`  | Published version not indexed yet (retried after upload) |
 
@@ -187,6 +187,6 @@ Publish runs only on upstream `main`. Merge to `Netcracker/qubership-envgene` `m
 ## Related files
 
 - Package source: [/python/external-cred-provision/](/python/external-cred-provision/)
-- Package README (PyPI long description): [/python/external-cred-provision/README.md](/python/external-cred-provision/README.md)
+- Package readme (PyPI long description): [/python/external-cred-provision/README.md](/python/external-cred-provision/README.md)
 - CLI feature reference: [/docs/features/external-creds-provisioning-cli.md](/docs/features/external-creds-provisioning-cli.md)
 - Artifact naming conventions: [/docs/dev/artifact-naming.md](/docs/dev/artifact-naming.md)

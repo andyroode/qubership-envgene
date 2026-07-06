@@ -38,20 +38,21 @@ The workflow reads them as `TWINE_USERNAME` and `TWINE_PASSWORD` during credenti
 
 ### Optional GitHub App (protected `main`)
 
-| Setting | Purpose |
-|---------|---------|
-| Variable `GH_BUMP_VERSION_APP_ID` | GitHub App ID for version-bump pushes |
-| Secret `GH_BUMP_VERSION_APP_KEY` | GitHub App private key |
+| Setting                           | Purpose                                   |
+|-----------------------------------|-------------------------------------------|
+| Variable `GH_BUMP_VERSION_APP_ID` | GitHub App ID for version-bump pushes     |
+| Secret `GH_BUMP_VERSION_APP_KEY`  | GitHub App private key                    |
 
-When both are configured, `sync-repo-version` uses an app installation token instead of `GITHUB_TOKEN`.
+When both are configured, `sync-repo-version` uses an app installation token instead of `GITHUB_TOKEN`. If only
+one is set, the app token step is skipped and the job falls back to `GITHUB_TOKEN`.
 
 ### Branch protection
 
 The `sync-repo-version` job pushes a version bump commit to the workflow ref (upstream `main`).
 
-When repository variable `GH_BUMP_VERSION_APP_ID` is set, the job creates a GitHub App installation token
-(same as [Release: EnvGene](/.github/workflows/docker_publish_release.yml)) using secret
-`GH_BUMP_VERSION_APP_KEY`, then checks out and pushes with that token to bypass branch protection.
+When `GH_BUMP_VERSION_APP_ID` and `GH_BUMP_VERSION_APP_KEY` are both configured, the job creates a GitHub App
+installation token (same as [Release: EnvGene](/.github/workflows/docker_publish_release.yml)), then checks out
+and pushes with that token to bypass branch protection.
 
 If the app is not configured, the job falls back to `GITHUB_TOKEN`. In that case, branch protection on `main`
 must allow `github-actions[bot]` to push, or the publish succeeds but the repository version stays unchanged.

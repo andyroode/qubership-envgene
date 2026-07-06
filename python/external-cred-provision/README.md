@@ -30,24 +30,26 @@ supports dry-run mode for CI validation without writes.
 pip install qubership-external-cred-provision
 ```
 
+The installed command is `external-cred-provision` (shorter than the PyPI package name).
+
 ## Quick start
 
 Apply provisioning from a context file:
 
 ```bash
-qubership-external-cred-provision path/to/external-credentials.yaml
+external-cred-provision path/to/external-credentials.yaml
 ```
 
 Validate without writing to any store:
 
 ```bash
-qubership-external-cred-provision --dry-run path/to/external-credentials.yaml
+external-cred-provision --dry-run path/to/external-credentials.yaml
 ```
 
 Set console log verbosity (full diagnostic log is always written to `full.log`):
 
 ```bash
-qubership-external-cred-provision --log-level INFO path/to/external-credentials.yaml
+external-cred-provision --log-level INFO path/to/external-credentials.yaml
 ```
 
 ## Command-line options

@@ -51,7 +51,7 @@ Issues = "https://github.com/Netcracker/qubership-envgene/issues"
 "EnvGene external credentials" = "https://github.com/Netcracker/qubership-envgene/blob/main/docs/features/external-creds.md"
 
 [project.scripts]
-qubership-external-cred-provision = "external_cred_provision.main:cli"
+external-cred-provision = "external_cred_provision.main:cli"
 
 [tool.setuptools.packages.find]
 where = ["src"]

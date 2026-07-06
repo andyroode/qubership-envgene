@@ -36,10 +36,25 @@ Configure these secrets on `Netcracker/qubership-envgene`:
 
 The workflow reads them as `TWINE_USERNAME` and `TWINE_PASSWORD` during credential checks and upload.
 
+### Optional GitHub App (protected `main`)
+
+| Setting | Purpose |
+|---------|---------|
+| Variable `GH_BUMP_VERSION_APP_ID` | GitHub App ID for version-bump pushes |
+| Secret `GH_BUMP_VERSION_APP_KEY` | GitHub App private key |
+
+When both are configured, `sync-repo-version` uses an app installation token instead of `GITHUB_TOKEN`.
+
 ### Branch protection
 
-The `sync-repo-version` job pushes a version bump commit as `github-actions[bot]`. Upstream `main` branch protection
-must allow that actor to push, or the publish succeeds but the repository version stays unchanged.
+The `sync-repo-version` job pushes a version bump commit to the workflow ref (upstream `main`).
+
+When repository variable `GH_BUMP_VERSION_APP_ID` is set, the job creates a GitHub App installation token
+(same as [Release: EnvGene](/.github/workflows/docker_publish_release.yml)) using secret
+`GH_BUMP_VERSION_APP_KEY`, then checks out and pushes with that token to bypass branch protection.
+
+If the app is not configured, the job falls back to `GITHUB_TOKEN`. In that case, branch protection on `main`
+must allow `github-actions[bot]` to push, or the publish succeeds but the repository version stays unchanged.
 
 ## Workflow file
 
@@ -51,11 +66,13 @@ Key environment variables:
 |-----------------------------|--------------------------------------------|
 | `PROJECT_DIR`               | `python/external-cred-provision`           |
 | `PACKAGE_NAME`              | `qubership-external-cred-provision`        |
-| `CLI_NAME`                  | `qubership-external-cred-provision`       |
+| `CLI_NAME`                  | `external-cred-provision`                  |
 | `UPSTREAM_REPO`             | `Netcracker/qubership-envgene`             |
 | `PYPI_SCRIPTS_DIR`          | `.github/scripts/pypi`                     |
 | `PYPI_RETRY_ATTEMPTS`       | `3`                                        |
 | `PYPI_RETRY_DELAY_SECONDS`  | `30`                                       |
+
+`PACKAGE_NAME` is the PyPI distribution name. `CLI_NAME` is the console command installed on `PATH` (shorter).
 
 GitHub Actions artifact name: `${PACKAGE_NAME}-dist-${version}` (for example
 `qubership-external-cred-provision-dist-0.0.1`).
@@ -108,6 +125,8 @@ Install after release:
 pip install qubership-external-cred-provision==<version>
 ```
 
+Run the CLI as `external-cred-provision` after install.
+
 ## Version rules
 
 - Input must match strict semver: `X.Y.Z` with no `v` prefix and no pre-release suffix.
@@ -158,8 +177,9 @@ Check `PYPI_API_USER` and `PYPI_API_TOKEN`. When the username is `__token__`, th
 
 ### Publish succeeds but sync commit fails
 
-Branch protection on `main` may block `github-actions[bot]`. Adjust protection rules or commit the version bump
-manually.
+If `GH_BUMP_VERSION_APP_ID` is not set, branch protection on `main` may block `github-actions[bot]`. Configure the
+GitHub App (`GH_BUMP_VERSION_APP_ID` + `GH_BUMP_VERSION_APP_KEY`) or adjust protection rules, or commit the version
+bump manually.
 
 ### Build-only on a fork when you expected publish
 
@@ -167,7 +187,7 @@ Publish runs only on upstream `main`. Merge to `Netcracker/qubership-envgene` `m
 
 ### CLI layout check fails
 
-`pyproject.toml` `[project.scripts]` must define an entry point named `qubership-external-cred-provision` matching
+`pyproject.toml` `[project.scripts]` must define an entry point named `external-cred-provision` matching
 `CLI_NAME` in the workflow.
 
 ## Related files

@@ -1,6 +1,7 @@
 # Builds, tests, and publishes qubership-external-cred-provision to PyPI (upstream main only).
 # Forks and non-main refs run build-only: validate, test, artifact upload; no PyPI upload.
 # Required repository secrets: PYPI_API_USER, PYPI_API_TOKEN.
+# Optional for protected-branch push: vars GH_BUMP_VERSION_APP_ID, secret GH_BUMP_VERSION_APP_KEY.
 # Operator guide: docs/dev/external-cred-provision-pypi-publish-workflow.md
 # Helper scripts: .github/scripts/pypi/
 
@@ -26,7 +27,7 @@ permissions:
 env:
   PROJECT_DIR: python/external-cred-provision
   PACKAGE_NAME: qubership-external-cred-provision
-  CLI_NAME: qubership-external-cred-provision
+  CLI_NAME: external-cred-provision
   UPSTREAM_REPO: Netcracker/qubership-envgene
   PYPI_RETRY_ATTEMPTS: 3
   PYPI_RETRY_DELAY_SECONDS: 30
@@ -72,7 +73,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@fd07e4be49718ebc76b92bcc6adacaf561707e65 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
@@ -123,7 +124,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@fd07e4be49718ebc76b92bcc6adacaf561707e65 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
@@ -283,7 +284,7 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@fd07e4be49718ebc76b92bcc6adacaf561707e65 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
       - name: Set up Python
         uses: actions/setup-python@ece7cb06caefa5fff74198d8649806c4678c61a1 # v6.3.0
@@ -394,8 +395,18 @@ jobs:
       contents: write
 
     steps:
+      - name: Prepare app token
+        if: ${{ vars.GH_BUMP_VERSION_APP_ID != '' }}
+        id: app-token
+        uses: actions/create-github-app-token@bcd2ba49218906704ab6c1aa796996da409d3eb1 # v3.2.0
+        with:
+          app-id: ${{ vars.GH_BUMP_VERSION_APP_ID }}
+          private-key: ${{ secrets.GH_BUMP_VERSION_APP_KEY }}
+
       - name: Checkout repository
-        uses: actions/checkout@fd07e4be49718ebc76b92bcc6adacaf561707e65 # v6.0.3
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+        with:
+          token: ${{ steps.app-token.outputs.token || secrets.GITHUB_TOKEN }}
 
       - name: Set release version in pyproject.toml
         env:
@@ -429,7 +440,7 @@ jobs:
           fi
 
           git commit -m "chore: bump ${PACKAGE_NAME} version to ${VERSION}"
-          git push
+          git push origin "HEAD:${{ github.ref_name }}"
           echo "committed=true" >> "${GITHUB_OUTPUT}"
           echo "commit_sha=$(git rev-parse HEAD)" >> "${GITHUB_OUTPUT}"
           echo "OK: repository version synced to ${VERSION}."

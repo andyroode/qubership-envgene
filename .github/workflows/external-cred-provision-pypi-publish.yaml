@@ -1,7 +1,7 @@
 # Builds, tests, and publishes qubership-external-cred-provision to PyPI (upstream main only).
 # Forks and non-main refs run build-only: validate, test, artifact upload; no PyPI upload.
 # Required repository secrets: PYPI_API_USER, PYPI_API_TOKEN.
-# Optional for protected-branch push: vars GH_BUMP_VERSION_APP_ID, secret GH_BUMP_VERSION_APP_KEY.
+# Required for version sync on protected main: vars GH_BUMP_VERSION_APP_ID, secret GH_BUMP_VERSION_APP_KEY.
 # Operator guide: docs/dev/external-cred-provision-pypi-publish-workflow.md
 # Helper scripts: .github/scripts/pypi/
 

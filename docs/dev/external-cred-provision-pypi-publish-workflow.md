@@ -36,26 +36,19 @@ Configure these secrets on `Netcracker/qubership-envgene`:
 
 The workflow reads them as `TWINE_USERNAME` and `TWINE_PASSWORD` during credential checks and upload.
 
-### Optional GitHub App (protected `main`)
+### GitHub App for version-bump push (required on protected `main`)
 
 | Setting                           | Purpose                                   |
 |-----------------------------------|-------------------------------------------|
 | Variable `GH_BUMP_VERSION_APP_ID` | GitHub App ID for version-bump pushes     |
 | Secret `GH_BUMP_VERSION_APP_KEY`  | GitHub App private key                    |
 
-When both are configured, `sync-repo-version` uses an app installation token instead of `GITHUB_TOKEN`. If only
-one is set, the app token step is skipped and the job falls back to `GITHUB_TOKEN`.
+Configure both on `Netcracker/qubership-envgene`. The `sync-repo-version` job uses an app installation token to
+push the `pyproject.toml` version bump when `main` is protected (same app as
+[Release: EnvGene](/.github/workflows/docker_publish_release.yml)).
 
-### Branch protection
-
-The `sync-repo-version` job pushes a version bump commit to the workflow ref (upstream `main`).
-
-When `GH_BUMP_VERSION_APP_ID` and `GH_BUMP_VERSION_APP_KEY` are both configured, the job creates a GitHub App
-installation token (same as [Release: EnvGene](/.github/workflows/docker_publish_release.yml)), then checks out
-and pushes with that token to bypass branch protection.
-
-If the app is not configured, the job falls back to `GITHUB_TOKEN`. In that case, branch protection on `main`
-must allow `github-actions[bot]` to push, or the publish succeeds but the repository version stays unchanged.
+If either value is missing, the app token step is skipped and the job falls back to `GITHUB_TOKEN`. That fallback
+works only when branch protection allows `github-actions[bot]` to push.
 
 ## Workflow file
 
@@ -178,9 +171,9 @@ Check `PYPI_API_USER` and `PYPI_API_TOKEN`. When the username is `__token__`, th
 
 ### Publish succeeds but sync commit fails
 
-If `GH_BUMP_VERSION_APP_ID` is not set, branch protection on `main` may block `github-actions[bot]`. Configure the
-GitHub App (`GH_BUMP_VERSION_APP_ID` + `GH_BUMP_VERSION_APP_KEY`) or adjust protection rules, or commit the version
-bump manually.
+If `GH_BUMP_VERSION_APP_ID` or `GH_BUMP_VERSION_APP_KEY` is missing on protected `main`, the sync push fails or
+is rejected. Configure both app settings (same as the EnvGene release workflow) or adjust branch protection rules,
+or commit the version bump manually.
 
 ### Build-only on a fork when you expected publish
 

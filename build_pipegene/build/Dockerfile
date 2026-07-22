@@ -44,9 +44,10 @@ RUN chmod 754 /module/scripts/*
 # ═══════════════════════════════════════════════════════════════════════════════════
 FROM ghcr.io/netcracker/qubership-envgene-base-modules:1.0.0 AS runtime
 
+LABEL org.opencontainers.image.title="Qubership PipeGene" \
+    org.opencontainers.image.description="PipeGene CI/CD pipeline container"
+
 COPY --from=build /module /module
-COPY --from=build /python /python
-COPY --from=build /etc/pip.conf /etc/pip.conf
 
 # Final cleanup
 RUN set -eux; \
@@ -55,7 +56,7 @@ RUN set -eux; \
     /module/venv/bin/pip cache purge 2>/dev/null || true;
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import sys; sys.exit(0)" || exit 1
+    CMD /module/venv/bin/python -c "import envgenehelper, integration_loader, jschon_tools" || exit 1
 
 RUN chown -R ci:ci /module
 USER ci:ci

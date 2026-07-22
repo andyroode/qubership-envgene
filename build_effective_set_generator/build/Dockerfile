@@ -41,6 +41,9 @@ COPY build_effective_set_generator/effective-set-generator/target/*.jar /deploym
 # ═══════════════════════════════════════════════════════════════════════════════════
 FROM ghcr.io/netcracker/qubership-envgene-base-modules:1.0.0 AS runtime
 
+LABEL org.opencontainers.image.title="Qubership Effective Set Generator" \
+    org.opencontainers.image.description="Effective Set Generator CI/CD container"
+
 ARG JAVA_PACKAGE=openjdk17-jre-headless=17.0.14_p7-r0
 
 ENV LANG='en_US.UTF-8' \
@@ -52,7 +55,6 @@ RUN apk add --no-cache \
     libgcc=13.2.1_git20231014-r0 \
     ${JAVA_PACKAGE}
 
-COPY --from=build /python /python
 COPY --from=build /module/venv /module/venv
 COPY --from=build /deployments /deployments
 
@@ -67,6 +69,9 @@ RUN chown -R ci:ci /module /deployments && \
   chmod 644 /module/scripts/*.py 2>/dev/null || true && \
   chmod 540 /deployments/run-java.sh && \
   chmod g+rwX /deployments
+
+HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
+    CMD /module/venv/bin/python -c "import envgenehelper, integration_loader, jschon_tools, artifact_searcher" || exit 1
 
 USER ci:ci
 WORKDIR /module

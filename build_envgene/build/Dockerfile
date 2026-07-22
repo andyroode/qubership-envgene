@@ -48,12 +48,13 @@ RUN chmod 754 /module/scripts/* && \
 # ═══════════════════════════════════════════════════════════════════════════════════
 FROM ghcr.io/netcracker/qubership-envgene-base-modules:1.0.0 AS runtime
 
+LABEL org.opencontainers.image.title="Qubership EnvGene" \
+    org.opencontainers.image.description="EnvGene CI/CD build container"
+
 COPY --from=build /module /module
 COPY --from=build /scripts/bg_manage /scripts/bg_manage
 COPY --from=build /build_env /build_env
 COPY --from=build /cloud_passport /cloud_passport
-COPY --from=build /python /python
-COPY --from=build /etc/pip.conf /etc/pip.conf
 
 RUN rm -rf /var/cache/apk/* /tmp/* /var/tmp/* /root/.cache && \
     find /module/venv/lib/python3.12/site-packages -name '*.pyc' -delete && \
@@ -62,7 +63,7 @@ RUN rm -rf /var/cache/apk/* /tmp/* /var/tmp/* /root/.cache && \
 RUN chown -R ci:ci /module /build_env /cloud_passport /scripts
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
-    CMD python -c "import sys; sys.exit(0)" || exit 1
+    CMD /module/venv/bin/python -c "import envgenehelper, integration_loader, jschon_tools, artifact_searcher, external_cred_provision" || exit 1
 
 # checkov:skip=CKV_DOCKER_8:Root required for workspace write in CI/CD
 # hadolint ignore=DL3002

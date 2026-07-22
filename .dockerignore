@@ -1,0 +1,42 @@
+# Reduce Docker build context for images built with context: .
+
+# Version control and editor metadata
+.git
+.gitignore
+.cursor
+**/.DS_Store
+
+# Documentation and samples (not copied into production images)
+docs/
+*.md
+
+# Local development stack (separate devtools/tests/Dockerfile context)
+devtools/
+
+# CI workflow definitions (image sources live under build_* and github_workflows/)
+.github/
+
+# Test fixtures and unit/integration test trees
+test_data/
+**/tests/
+**/.pytest_cache/
+**/__pycache__/
+**/*.pyc
+**/*.pyo
+
+# Maven outputs - keep only the Effective Set Generator JAR consumed by its Dockerfile
+**/target/
+!build_effective_set_generator/effective-set-generator/target/
+!build_effective_set_generator/effective-set-generator/target/*.jar
+
+# Java sources and POMs not referenced by Docker COPY instructions
+build_effective_set_generator/commons/
+build_effective_set_generator/parameters-processor/
+build_effective_set_generator/effective-set-generator/src/
+build_effective_set_generator/pom.xml
+build_effective_set_generator/README.md
+
+# Secrets and local env files
+.env
+.env.*
+*.log
